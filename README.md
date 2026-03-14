@@ -43,12 +43,12 @@ import (
     "fmt"
     "log"
 
-    "github.com/mukbeast4/go-mt5/pkg/mt5"
+    gomt5 "github.com/mukbeast4/go-mt5"
 )
 
 func main() {
     // Auto-discovers the MT5 named pipe
-    client, err := mt5.NewClient()
+    client, err := gomt5.NewClient()
     if err != nil {
         log.Fatal(err)
     }
@@ -69,17 +69,17 @@ func main() {
     }
     fmt.Printf("EURUSD Bid: %.5f Ask: %.5f\n", tick.Bid, tick.Ask)
 
-    rates, err := client.CopyRatesFromPos("EURUSD", mt5.TimeframeH1, 0, 100)
+    rates, err := client.CopyRatesFromPos("EURUSD", gomt5.TimeframeH1, 0, 100)
     if err != nil {
         log.Fatal(err)
     }
     fmt.Printf("Got %d H1 rates\n", len(rates))
 
-    result, err := client.OrderSend(mt5.TradeRequest{
-        Action:    mt5.TradeActionDeal,
+    result, err := client.OrderSend(gomt5.TradeRequest{
+        Action:    gomt5.TradeActionDeal,
         Symbol:    "EURUSD",
         Volume:    0.01,
-        Type:      mt5.OrderTypeBuy,
+        Type:      gomt5.OrderTypeBuy,
         Price:     tick.Ask,
         Deviation: 10,
     })
@@ -103,20 +103,6 @@ func main() {
 | History | `HistoryOrdersTotal()`, `HistoryOrdersGet()`, `HistoryDealsTotal()`, `HistoryDealsGet()` |
 | Debug | `SendRaw()` |
 
-## CLI
-
-```bash
-go build -o mt5cli ./cmd/mt5cli
-
-mt5cli version
-mt5cli account
-mt5cli symbol EURUSD
-mt5cli tick EURUSD
-mt5cli rates EURUSD H1 100
-mt5cli positions
-mt5cli raw 173           # raw command by ID
-```
-
 ## Testing
 
 ```bash
@@ -129,11 +115,10 @@ Tests use an in-memory mock pipe, no MT5 instance needed.
 
 ```
 go-mt5/
-├── cmd/mt5cli/              # CLI tool
+├── *.go                     # Public API (package gomt5)
 ├── internal/
 │   ├── protocol/            # Binary codec + message framing
 │   └── pipe/                # Windows named pipe connection
-├── pkg/mt5/                 # Public API
 ├── tools/
 │   ├── sniffer/             # Pipe traffic capture tools
 │   └── analyzer/            # PYD binary analysis tools

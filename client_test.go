@@ -1,4 +1,4 @@
-package mt5_test
+package gomt5_test
 
 import (
 	"encoding/binary"
@@ -7,8 +7,8 @@ import (
 	"testing"
 	"unicode/utf16"
 
+	gomt5 "github.com/mukbeast4/go-mt5"
 	"github.com/mukbeast4/go-mt5/internal/protocol"
-	"github.com/mukbeast4/go-mt5/pkg/mt5"
 )
 
 type mockPipe struct {
@@ -141,7 +141,7 @@ func TestInitAndVersion(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := mt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestAccountInfo(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := mt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
@@ -243,7 +243,7 @@ func TestSymbolsTotal(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := mt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
@@ -278,7 +278,7 @@ func TestSymbolInfoTick(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := mt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
@@ -334,13 +334,13 @@ func TestCopyRatesFromPos(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := mt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
 	defer client.Close()
 
-	rates, err := client.CopyRatesFromPos("EURUSD", mt5.TimeframeH1, 0, 2)
+	rates, err := client.CopyRatesFromPos("EURUSD", gomt5.TimeframeH1, 0, 2)
 	if err != nil {
 		t.Fatalf("copy rates: %v", err)
 	}
@@ -367,7 +367,7 @@ func TestErrorResponse(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := mt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
@@ -391,7 +391,7 @@ func TestPositionsTotal(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := mt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}

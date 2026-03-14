@@ -1,4 +1,4 @@
-package mt5
+package gomt5
 
 type Timeframe int
 

@@ -1,4 +1,4 @@
-package mt5
+package gomt5
 
 type AccountInfo struct {
 	Login             int64   `json:"login"`
