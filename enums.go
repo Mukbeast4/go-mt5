@@ -29,15 +29,15 @@ const (
 type OrderType int
 
 const (
-	OrderTypeBuy            OrderType = 0
-	OrderTypeSell           OrderType = 1
-	OrderTypeBuyLimit       OrderType = 2
-	OrderTypeSellLimit      OrderType = 3
-	OrderTypeBuyStop        OrderType = 4
-	OrderTypeSellStop       OrderType = 5
-	OrderTypeBuyStopLimit   OrderType = 6
-	OrderTypeSellStopLimit  OrderType = 7
-	OrderTypeCloseBy        OrderType = 8
+	OrderTypeBuy           OrderType = 0
+	OrderTypeSell          OrderType = 1
+	OrderTypeBuyLimit      OrderType = 2
+	OrderTypeSellLimit     OrderType = 3
+	OrderTypeBuyStop       OrderType = 4
+	OrderTypeSellStop      OrderType = 5
+	OrderTypeBuyStopLimit  OrderType = 6
+	OrderTypeSellStopLimit OrderType = 7
+	OrderTypeCloseBy       OrderType = 8
 )
 
 type TradeAction int

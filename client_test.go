@@ -167,30 +167,30 @@ func TestAccountInfo(t *testing.T) {
 		}
 		if cmdID == protocol.CmdAccountInfo {
 			var d []byte
-			d = writeI64(d, 12345)     // login
-			d = writeI64(d, 0)         // trade_mode
-			d = writeI64(d, 100)       // leverage
-			d = writeI64(d, 200)       // limit_orders
-			d = writeI64(d, 0)         // margin_so_mode
-			d = writeI64(d, 1)         // trade_allowed
-			d = writeI64(d, 1)         // trade_expert
-			d = writeI64(d, 0)         // margin_mode
-			d = writeI64(d, 2)         // currency_digits
-			d = writeI64(d, 0)         // fifo_close
-			d = writeF64(d, 10000.50)  // balance
-			d = writeF64(d, 0)         // credit
-			d = writeF64(d, 150.25)    // profit
-			d = writeF64(d, 10150.75)  // equity
-			d = writeF64(d, 500.0)     // margin
-			d = writeF64(d, 9650.75)   // free_margin
-			d = writeF64(d, 2030.15)   // margin_level
-			d = writeF64(d, 50.0)      // margin_so_call
-			d = writeF64(d, 30.0)      // margin_so_so
-			d = writeF64(d, 0)         // margin_initial
-			d = writeF64(d, 0)         // margin_maintenance
-			d = writeF64(d, 0)         // assets
-			d = writeF64(d, 0)         // liabilities
-			d = writeF64(d, 0)         // commission_blocked
+			d = writeI64(d, 12345)    // login
+			d = writeI64(d, 0)        // trade_mode
+			d = writeI64(d, 100)      // leverage
+			d = writeI64(d, 200)      // limit_orders
+			d = writeI64(d, 0)        // margin_so_mode
+			d = writeI64(d, 1)        // trade_allowed
+			d = writeI64(d, 1)        // trade_expert
+			d = writeI64(d, 0)        // margin_mode
+			d = writeI64(d, 2)        // currency_digits
+			d = writeI64(d, 0)        // fifo_close
+			d = writeF64(d, 10000.50) // balance
+			d = writeF64(d, 0)        // credit
+			d = writeF64(d, 150.25)   // profit
+			d = writeF64(d, 10150.75) // equity
+			d = writeF64(d, 500.0)    // margin
+			d = writeF64(d, 9650.75)  // free_margin
+			d = writeF64(d, 2030.15)  // margin_level
+			d = writeF64(d, 50.0)     // margin_so_call
+			d = writeF64(d, 30.0)     // margin_so_so
+			d = writeF64(d, 0)        // margin_initial
+			d = writeF64(d, 0)        // margin_maintenance
+			d = writeF64(d, 0)        // assets
+			d = writeF64(d, 0)        // liabilities
+			d = writeF64(d, 0)        // commission_blocked
 			d = writeStr(d, "Test User")
 			d = writeStr(d, "MetaQuotes-Demo")
 			d = writeStr(d, "USD")
@@ -265,13 +265,13 @@ func TestSymbolInfoTick(t *testing.T) {
 		}
 		if cmdID == protocol.CmdSymbolInfoTick {
 			var d []byte
-			d = writeI64(d, 1710000000)     // time
-			d = writeF64(d, 1.08500)        // bid
-			d = writeF64(d, 1.08520)        // ask
-			d = writeF64(d, 0)              // last
-			d = writeI64(d, 0)              // volume (u64)
-			d = writeI64(d, 1710000000123)  // time_msc
-			d = writeU32(d, 6)              // flags
+			d = writeI64(d, 1710000000)    // time
+			d = writeF64(d, 1.08500)       // bid
+			d = writeF64(d, 1.08520)       // ask
+			d = writeF64(d, 0)             // last
+			d = writeI64(d, 0)             // volume (u64)
+			d = writeI64(d, 1710000000123) // time_msc
+			d = writeU32(d, 6)             // flags
 			return true, d
 		}
 		return false, nil

@@ -19,19 +19,19 @@ const (
 	ResEInternalFailConnect = -10004
 	ResEInternalFailTimeout = -10005
 
-	RetcodeOK              = 10009
-	RetcodeDone            = 10008
-	RetcodeRequote         = 10004
-	RetcodeReject          = 10006
-	RetcodeCancel          = 10007
-	RetcodeInvalidFill     = 10030
-	RetcodeInvalidVolume   = 10015
-	RetcodeInvalidPrice    = 10016
-	RetcodeInvalidStops    = 10017
-	RetcodeTradeDisabled   = 10018
-	RetcodeMarketClosed    = 10019
-	RetcodeNoQuotes        = 10024
-	RetcodeTooManyOrders   = 10028
+	RetcodeOK            = 10009
+	RetcodeDone          = 10008
+	RetcodeRequote       = 10004
+	RetcodeReject        = 10006
+	RetcodeCancel        = 10007
+	RetcodeInvalidFill   = 10030
+	RetcodeInvalidVolume = 10015
+	RetcodeInvalidPrice  = 10016
+	RetcodeInvalidStops  = 10017
+	RetcodeTradeDisabled = 10018
+	RetcodeMarketClosed  = 10019
+	RetcodeNoQuotes      = 10024
+	RetcodeTooManyOrders = 10028
 )
 
 type MT5Error struct {
