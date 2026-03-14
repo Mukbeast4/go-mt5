@@ -112,6 +112,14 @@ go-mt5/
 └── mql5/                    # EA bridge (alternative approach)
 ```
 
+## Contributing
+
+We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting a pull request.
+
+## Security
+
+To report a security vulnerability, please see our [Security Policy](SECURITY.md).
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
