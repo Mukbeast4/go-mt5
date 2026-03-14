@@ -1,14 +1,32 @@
 # go-mt5
 
-Go library for MetaTrader 5, equivalent to the official Python `MetaTrader5` package.
+Native Go binding for MetaTrader 5. Communicates directly with the MT5 terminal via Windows Named Pipe IPC, the same mechanism used by the official Python `MetaTrader5` package. No Expert Advisor needed.
 
 ## Architecture
 
-A MQL5 Expert Advisor runs inside MT5 as a TCP socket server on `127.0.0.1:15555`. The Go library connects as a TCP client. Protocol is JSON with length-prefix framing (4 bytes big-endian).
+```
+Go Client --Named Pipe IPC--> terminal64.exe (MT5)
+```
+
+The library reverse-engineered the proprietary binary protocol used by MetaQuotes between `MetaTrader5.pyd` and `terminal64.exe`. It connects to the same named pipe, performs the same handshake, and speaks the same binary framing.
+
+### Protocol
 
 ```
-[Go Client] --TCP--> [MT5 EA Server (127.0.0.1:15555)]
+Request:  [payload_len:LE32][cmd_id:LE32][params...]
+Response: [payload_len:LE32][cmd_echo:LE32][success:LE32][data...]
 ```
+
+- Integers: LE32/LE64
+- Floats: IEEE 754 double LE64
+- Strings: [char_count:LE32][UTF-16LE data]
+- Booleans: LE64 (0/1)
+
+## Requirements
+
+- Windows (named pipes are a Windows kernel feature)
+- MetaTrader 5 terminal running with an active account
+- Go 1.21+
 
 ## Installation
 
@@ -16,57 +34,53 @@ A MQL5 Expert Advisor runs inside MT5 as a TCP socket server on `127.0.0.1:15555
 go get github.com/mukbeast4/go-mt5
 ```
 
-## MT5 Setup
-
-1. Copy `mql5/GoMT5Bridge.mq5` to your MT5 `Experts` folder
-2. Compile the EA in MetaEditor
-3. Attach the EA to any chart (it uses `OnTimer`, not `OnTick` for request handling)
-4. Allow socket connections in MT5: Tools > Options > Expert Advisors > Allow WebRequest
-
 ## Usage
 
 ```go
 package main
 
 import (
-    "context"
     "fmt"
     "log"
-    "time"
 
     "github.com/mukbeast4/go-mt5/pkg/mt5"
 )
 
 func main() {
-    client, err := mt5.NewClient(
-        mt5.WithAddress("127.0.0.1:15555"),
-        mt5.WithTimeout(30 * time.Second),
-    )
+    // Auto-discovers the MT5 named pipe
+    client, err := mt5.NewClient()
     if err != nil {
         log.Fatal(err)
     }
     defer client.Close()
 
-    ctx := context.Background()
+    fmt.Printf("Connected to MT5 build %d\n", client.Build())
 
-    account, err := client.AccountInfo(ctx)
+    account, err := client.AccountInfo()
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Printf("Account: %s Balance: %.2f %s\n", account.Name, account.Balance, account.Currency)
+    fmt.Printf("Account: %s Balance: %.2f %s\n",
+        account.Name, account.Balance, account.Currency)
 
-    rates, err := client.CopyRatesFrom(ctx, "EURUSD", mt5.TimeframeH1, time.Now().Add(-24*time.Hour).Unix(), 100)
+    tick, err := client.SymbolInfoTick("EURUSD")
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Printf("Got %d rates\n", len(rates))
+    fmt.Printf("EURUSD Bid: %.5f Ask: %.5f\n", tick.Bid, tick.Ask)
 
-    result, err := client.OrderSend(ctx, mt5.TradeRequest{
-        Action:   mt5.TradeActionDeal,
-        Symbol:   "EURUSD",
-        Volume:   0.01,
-        Type:     mt5.OrderTypeBuy,
-        Price:    1.0850,
+    rates, err := client.CopyRatesFromPos("EURUSD", mt5.TimeframeH1, 0, 100)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Got %d H1 rates\n", len(rates))
+
+    result, err := client.OrderSend(mt5.TradeRequest{
+        Action:    mt5.TradeActionDeal,
+        Symbol:    "EURUSD",
+        Volume:    0.01,
+        Type:      mt5.OrderTypeBuy,
+        Price:     tick.Ask,
         Deviation: 10,
     })
     if err != nil {
@@ -76,51 +90,32 @@ func main() {
 }
 ```
 
-## Streaming Ticks
-
-```go
-ch, err := client.SubscribeTicks(ctx, "EURUSD")
-if err != nil {
-    log.Fatal(err)
-}
-
-for tick := range ch {
-    fmt.Printf("Bid: %.5f Ask: %.5f\n", tick.Bid, tick.Ask)
-}
-```
-
-## CLI
-
-```bash
-go run ./cmd/mt5cli version
-go run ./cmd/mt5cli account
-go run ./cmd/mt5cli symbol EURUSD
-go run ./cmd/mt5cli rates EURUSD H1 100
-go run ./cmd/mt5cli subscribe EURUSD
-```
-
 ## API
 
 | Group | Methods |
 |-------|---------|
-| Connection | `Version()`, `LastError()` |
-| Account | `AccountInfo()`, `TerminalInfo()` |
-| Symbols | `SymbolsTotal()`, `SymbolsGet()`, `SymbolInfo()`, `SymbolInfoTick()`, `SymbolSelect()` |
-| Market Data | `CopyRatesFrom()`, `CopyRatesFromPos()`, `CopyRatesRange()`, `CopyTicksFrom()`, `CopyTicksRange()`, `MarketBookAdd()`, `MarketBookGet()`, `MarketBookRelease()` |
+| Connection | `NewClient()`, `Close()`, `Build()`, `LastError()` |
+| Account | `AccountInfo()`, `TerminalInfo()`, `Version()` |
+| Symbols | `SymbolsTotal()`, `SymbolInfo()`, `SymbolInfoTick()` |
+| Market Data | `CopyRatesFrom()`, `CopyRatesFromPos()`, `CopyRatesRange()`, `CopyTicksFrom()`, `CopyTicksRange()` |
 | Trading | `OrderSend()`, `OrderCheck()`, `OrderCalcMargin()`, `OrderCalcProfit()`, `OrdersTotal()`, `OrdersGet()` |
 | Positions | `PositionsTotal()`, `PositionsGet()` |
 | History | `HistoryOrdersTotal()`, `HistoryOrdersGet()`, `HistoryDealsTotal()`, `HistoryDealsGet()` |
-| Streaming | `SubscribeTicks()`, `UnsubscribeTicks()` |
+| Debug | `SendRaw()` |
 
-## Protocol
+## CLI
 
+```bash
+go build -o mt5cli ./cmd/mt5cli
+
+mt5cli version
+mt5cli account
+mt5cli symbol EURUSD
+mt5cli tick EURUSD
+mt5cli rates EURUSD H1 100
+mt5cli positions
+mt5cli raw 173           # raw command by ID
 ```
-[4 bytes uint32 BE = payload size][JSON payload]
-```
-
-Request: `{"id":"uuid","action":"copy_rates_from","params":{...}}`
-Response: `{"id":"uuid","success":true,"data":[...]}`
-Event: `{"type":"event","event":"tick","data":{"symbol":"EURUSD","bid":1.0850,...}}`
 
 ## Testing
 
@@ -128,8 +123,20 @@ Event: `{"type":"event","event":"tick","data":{"symbol":"EURUSD","bid":1.0850,..
 go test ./...
 ```
 
-Integration tests require a running MT5 instance with the EA attached:
+Tests use an in-memory mock pipe, no MT5 instance needed.
 
-```bash
-go test -tags integration ./...
+## Project Structure
+
+```
+go-mt5/
+├── cmd/mt5cli/              # CLI tool
+├── internal/
+│   ├── protocol/            # Binary codec + message framing
+│   └── pipe/                # Windows named pipe connection
+├── pkg/mt5/                 # Public API
+├── tools/
+│   ├── sniffer/             # Pipe traffic capture tools
+│   └── analyzer/            # PYD binary analysis tools
+├── mql5/                    # EA bridge (alternative approach)
+└── docs/                    # Reverse engineering documentation
 ```

@@ -1,23 +1,20 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/mukbeast4/go-mt5/pkg/mt5"
 )
 
 func main() {
-	addr := flag.String("addr", "127.0.0.1:15555", "MT5 EA address")
-	timeout := flag.Duration("timeout", 30*time.Second, "request timeout")
+	pipeName := flag.String("pipe", "", "MT5 named pipe (auto-discover if empty)")
+	timeout := flag.Duration("timeout", 60*time.Second, "connection timeout")
 	flag.Parse()
 
 	args := flag.Args()
@@ -26,58 +23,50 @@ func main() {
 		os.Exit(1)
 	}
 
-	client, err := mt5.NewClient(
-		mt5.WithAddress(*addr),
-		mt5.WithTimeout(*timeout),
-	)
+	opts := []mt5.Option{mt5.WithTimeout(*timeout)}
+	if *pipeName != "" {
+		opts = append(opts, mt5.WithPipeName(*pipeName))
+	}
+
+	client, err := mt5.NewClient(opts...)
 	if err != nil {
 		log.Fatalf("connect: %v", err)
 	}
 	defer client.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
-	defer cancel()
+	fmt.Printf("Connected (build %d)\n\n", client.Build())
 
 	action := args[0]
 	switch action {
 	case "version":
-		result, err := client.Version(ctx)
+		result, err := client.Version()
 		exitOnErr(err)
 		printJSON(result)
 
 	case "account":
-		result, err := client.AccountInfo(ctx)
+		result, err := client.AccountInfo()
 		exitOnErr(err)
 		printJSON(result)
 
 	case "terminal":
-		result, err := client.TerminalInfo(ctx)
+		result, err := client.TerminalInfo()
 		exitOnErr(err)
 		printJSON(result)
 
 	case "symbols-total":
-		result, err := client.SymbolsTotal(ctx)
+		result, err := client.SymbolsTotal()
 		exitOnErr(err)
 		fmt.Println(result)
 
-	case "symbols":
-		group := ""
-		if len(args) > 1 {
-			group = args[1]
-		}
-		result, err := client.SymbolsGet(ctx, group)
-		exitOnErr(err)
-		printJSON(result)
-
 	case "symbol":
 		requireArgs(args, 2)
-		result, err := client.SymbolInfo(ctx, args[1])
+		result, err := client.SymbolInfo(args[1])
 		exitOnErr(err)
 		printJSON(result)
 
 	case "tick":
 		requireArgs(args, 2)
-		result, err := client.SymbolInfoTick(ctx, args[1])
+		result, err := client.SymbolInfoTick(args[1])
 		exitOnErr(err)
 		printJSON(result)
 
@@ -89,8 +78,7 @@ func main() {
 		if len(args) > 3 {
 			fmt.Sscanf(args[3], "%d", &count)
 		}
-		from := time.Now().Add(-time.Duration(count) * time.Hour).Unix()
-		result, err := client.CopyRatesFrom(ctx, symbol, tf, from, count)
+		result, err := client.CopyRatesFromPos(symbol, tf, 0, count)
 		exitOnErr(err)
 		printJSON(result)
 
@@ -102,49 +90,42 @@ func main() {
 			fmt.Sscanf(args[2], "%d", &count)
 		}
 		from := time.Now().Add(-1 * time.Hour).Unix()
-		result, err := client.CopyTicksFrom(ctx, symbol, from, count, mt5.CopyTicksAll)
+		result, err := client.CopyTicksFrom(symbol, from, count, mt5.CopyTicksAll)
 		exitOnErr(err)
 		printJSON(result)
 
 	case "orders":
-		result, err := client.OrdersTotal(ctx)
+		total, err := client.OrdersTotal()
 		exitOnErr(err)
-		fmt.Printf("Total orders: %d\n", result)
-		orders, err := client.OrdersGet(ctx, "", "", 0)
-		exitOnErr(err)
-		printJSON(orders)
+		fmt.Printf("Total: %d\n", total)
 
 	case "positions":
-		result, err := client.PositionsTotal(ctx)
+		total, err := client.PositionsTotal()
 		exitOnErr(err)
-		fmt.Printf("Total positions: %d\n", result)
-		positions, err := client.PositionsGet(ctx, "", "", 0)
-		exitOnErr(err)
-		printJSON(positions)
+		fmt.Printf("Total: %d\n", total)
 
-	case "subscribe":
+	case "history-orders":
+		from := time.Now().AddDate(0, -1, 0).Unix()
+		to := time.Now().Unix()
+		total, err := client.HistoryOrdersTotal(from, to)
+		exitOnErr(err)
+		fmt.Printf("Total: %d\n", total)
+
+	case "history-deals":
+		from := time.Now().AddDate(0, -1, 0).Unix()
+		to := time.Now().Unix()
+		total, err := client.HistoryDealsTotal(from, to)
+		exitOnErr(err)
+		fmt.Printf("Total: %d\n", total)
+
+	case "raw":
 		requireArgs(args, 2)
-		symbol := args[1]
-		ch, err := client.SubscribeTicks(ctx, symbol)
+		var cmdID uint32
+		fmt.Sscanf(args[1], "%d", &cmdID)
+		data, err := client.SendRaw(cmdID, nil)
 		exitOnErr(err)
-		fmt.Printf("Subscribed to %s ticks (Ctrl+C to stop)\n", symbol)
-
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-
-		for {
-			select {
-			case tick, ok := <-ch:
-				if !ok {
-					return
-				}
-				fmt.Printf("Bid: %.5f  Ask: %.5f  Last: %.5f  Time: %d\n",
-					tick.Bid, tick.Ask, tick.Last, tick.TimeMsc)
-			case <-sigCh:
-				client.UnsubscribeTicks(context.Background(), symbol)
-				return
-			}
-		}
+		fmt.Printf("Response: %d bytes\n", len(data))
+		hexDump(data)
 
 	default:
 		fmt.Fprintf(os.Stderr, "unknown action: %s\n", action)
@@ -156,19 +137,24 @@ func main() {
 func printUsage() {
 	fmt.Println("Usage: mt5cli [flags] <action> [args...]")
 	fmt.Println()
+	fmt.Println("Flags:")
+	fmt.Println("  -pipe string    MT5 named pipe path (auto-discover if empty)")
+	fmt.Println("  -timeout dur    Connection timeout (default 60s)")
+	fmt.Println()
 	fmt.Println("Actions:")
-	fmt.Println("  version                  Show MT5/EA version")
+	fmt.Println("  version                  MT5 version info")
 	fmt.Println("  account                  Account info")
 	fmt.Println("  terminal                 Terminal info")
 	fmt.Println("  symbols-total            Total symbols count")
-	fmt.Println("  symbols [group]          List symbols")
 	fmt.Println("  symbol <name>            Symbol info")
 	fmt.Println("  tick <symbol>            Current tick")
 	fmt.Println("  rates <symbol> <tf> [n]  Copy rates (tf: M1,M5,H1,D1...)")
 	fmt.Println("  ticks <symbol> [n]       Copy ticks")
-	fmt.Println("  orders                   Active orders")
-	fmt.Println("  positions                Open positions")
-	fmt.Println("  subscribe <symbol>       Stream ticks in real-time")
+	fmt.Println("  orders                   Active orders count")
+	fmt.Println("  positions                Open positions count")
+	fmt.Println("  history-orders           History orders count (last month)")
+	fmt.Println("  history-deals            History deals count (last month)")
+	fmt.Println("  raw <cmd_id>             Send raw command (debug)")
 }
 
 func exitOnErr(err error) {
@@ -187,6 +173,27 @@ func requireArgs(args []string, n int) {
 func printJSON(v interface{}) {
 	data, _ := json.MarshalIndent(v, "", "  ")
 	fmt.Println(string(data))
+}
+
+func hexDump(data []byte) {
+	for i := 0; i < len(data); i += 16 {
+		end := i + 16
+		if end > len(data) {
+			end = len(data)
+		}
+		chunk := data[i:end]
+		hex := ""
+		ascii := ""
+		for _, b := range chunk {
+			hex += fmt.Sprintf("%02x ", b)
+			if b >= 32 && b < 127 {
+				ascii += string(rune(b))
+			} else {
+				ascii += "."
+			}
+		}
+		fmt.Printf("  %04x: %-48s  %s\n", i, hex, ascii)
+	}
 }
 
 func parseTimeframe(s string) mt5.Timeframe {

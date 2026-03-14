@@ -1,233 +1,346 @@
 package mt5_test
 
 import (
-	"context"
 	"encoding/binary"
-	"encoding/json"
-	"fmt"
 	"io"
-	"net"
+	"math"
 	"testing"
-	"time"
+	"unicode/utf16"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
 	"github.com/mukbeast4/go-mt5/pkg/mt5"
 )
 
-type mockServer struct {
-	listener net.Listener
-	handler  func(req protocol.Request) protocol.Response
-	done     chan struct{}
+type mockPipe struct {
+	reader *io.PipeReader
+	writer *io.PipeWriter
+
+	serverReader *io.PipeReader
+	serverWriter *io.PipeWriter
+
+	handler func(cmdID uint32, params []byte) (bool, []byte)
+	done    chan struct{}
 }
 
-func newMockServer(t *testing.T, handler func(req protocol.Request) protocol.Response) *mockServer {
+func newMockPipe(t *testing.T, handler func(cmdID uint32, params []byte) (bool, []byte)) *mockPipe {
 	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen: %v", err)
+	clientRead, serverWrite := io.Pipe()
+	serverRead, clientWrite := io.Pipe()
+
+	m := &mockPipe{
+		reader:       clientRead,
+		writer:       clientWrite,
+		serverReader: serverRead,
+		serverWriter: serverWrite,
+		handler:      handler,
+		done:         make(chan struct{}),
 	}
-	s := &mockServer{listener: ln, handler: handler, done: make(chan struct{})}
-	go s.serve(t)
-	return s
+	go m.serve(t)
+	return m
 }
 
-func (s *mockServer) addr() string {
-	return s.listener.Addr().String()
+func (m *mockPipe) Read(p []byte) (int, error)  { return m.reader.Read(p) }
+func (m *mockPipe) Write(p []byte) (int, error) { return m.writer.Write(p) }
+func (m *mockPipe) Close() error {
+	select {
+	case <-m.done:
+		return nil
+	default:
+		close(m.done)
+	}
+	m.reader.Close()
+	m.writer.Close()
+	m.serverReader.Close()
+	m.serverWriter.Close()
+	return nil
 }
 
-func (s *mockServer) close() {
-	close(s.done)
-	s.listener.Close()
-}
-
-func (s *mockServer) serve(t *testing.T) {
+func (m *mockPipe) serve(t *testing.T) {
 	for {
-		conn, err := s.listener.Accept()
-		if err != nil {
-			select {
-			case <-s.done:
-				return
-			default:
-				t.Logf("accept error: %v", err)
-			}
+		select {
+		case <-m.done:
+			return
+		default:
+		}
+
+		lenBuf := make([]byte, 4)
+		if _, err := io.ReadFull(m.serverReader, lenBuf); err != nil {
 			return
 		}
-		go s.handleConn(t, conn)
-	}
-}
+		payloadLen := binary.LittleEndian.Uint32(lenBuf)
+		payload := make([]byte, payloadLen)
+		if _, err := io.ReadFull(m.serverReader, payload); err != nil {
+			return
+		}
 
-func (s *mockServer) handleConn(t *testing.T, conn net.Conn) {
-	defer conn.Close()
-	for {
+		cmdID := binary.LittleEndian.Uint32(payload[0:4])
+		var params []byte
+		if len(payload) > 4 {
+			params = payload[4:]
+		}
+
+		success, data := m.handler(cmdID, params)
+
+		respLen := uint32(8 + len(data))
 		header := make([]byte, 4)
-		if _, err := io.ReadFull(conn, header); err != nil {
-			return
-		}
-		size := binary.BigEndian.Uint32(header)
-		payload := make([]byte, size)
-		if _, err := io.ReadFull(conn, payload); err != nil {
-			return
-		}
+		binary.LittleEndian.PutUint32(header, respLen)
+		m.serverWriter.Write(header)
 
-		var req protocol.Request
-		if err := json.Unmarshal(payload, &req); err != nil {
-			t.Logf("unmarshal request: %v", err)
-			return
+		body := make([]byte, 8+len(data))
+		binary.LittleEndian.PutUint32(body[0:4], cmdID)
+		if success {
+			binary.LittleEndian.PutUint32(body[4:8], 1)
 		}
-
-		resp := s.handler(req)
-		respData, _ := json.Marshal(resp)
-
-		respHeader := make([]byte, 4)
-		binary.BigEndian.PutUint32(respHeader, uint32(len(respData)))
-		conn.Write(respHeader)
-		conn.Write(respData)
+		copy(body[8:], data)
+		m.serverWriter.Write(body)
 	}
 }
 
-func TestVersion(t *testing.T) {
-	srv := newMockServer(t, func(req protocol.Request) protocol.Response {
-		data, _ := json.Marshal(mt5.VersionInfo{
-			Version:   "5.0.45",
-			Build:     4500,
-			BuildDate: "2025-01-01",
-			EAVersion: "1.0.0",
-		})
-		return protocol.Response{
-			ID:      req.ID,
-			Type:    protocol.TypeResponse,
-			Success: true,
-			Data:    data,
-		}
-	})
-	defer srv.close()
+func writeU32(buf []byte, v uint32) []byte {
+	b := make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, v)
+	return append(buf, b...)
+}
 
-	client, err := mt5.NewClient(mt5.WithAddress(srv.addr()))
+func writeI64(buf []byte, v int64) []byte {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(v))
+	return append(buf, b...)
+}
+
+func writeF64(buf []byte, v float64) []byte {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, math.Float64bits(v))
+	return append(buf, b...)
+}
+
+func writeStr(buf []byte, s string) []byte {
+	runes := utf16.Encode([]rune(s))
+	buf = writeU32(buf, uint32(len(runes)))
+	for _, r := range runes {
+		b := make([]byte, 2)
+		binary.LittleEndian.PutUint16(b, r)
+		buf = append(buf, b...)
+	}
+	return buf
+}
+
+func TestInitAndVersion(t *testing.T) {
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		switch cmdID {
+		case protocol.CmdInitialize:
+			return true, writeU32(nil, 5684)
+		case protocol.CmdTerminalInfo:
+			var data []byte
+			data = writeI64(data, 500)
+			data = writeI64(data, 5684)
+			data = writeStr(data, "01 Jan 2025")
+			return true, data
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := mt5.NewClientFromConn(mock)
 	if err != nil {
-		t.Fatalf("connect: %v", err)
+		t.Fatalf("new client: %v", err)
 	}
 	defer client.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	if client.Build() != 5684 {
+		t.Errorf("expected build 5684, got %d", client.Build())
+	}
 
-	info, err := client.Version(ctx)
+	ver, err := client.Version()
 	if err != nil {
 		t.Fatalf("version: %v", err)
 	}
-	if info.Version != "5.0.45" {
-		t.Errorf("expected version 5.0.45, got %s", info.Version)
-	}
-	if info.Build != 4500 {
-		t.Errorf("expected build 4500, got %d", info.Build)
+	if ver.Build != 5684 {
+		t.Errorf("expected build 5684, got %d", ver.Build)
 	}
 }
 
 func TestAccountInfo(t *testing.T) {
-	srv := newMockServer(t, func(req protocol.Request) protocol.Response {
-		data, _ := json.Marshal(mt5.AccountInfo{
-			Login:    12345,
-			Name:     "Test Account",
-			Balance:  10000.0,
-			Equity:   10050.0,
-			Currency: "USD",
-			Leverage: 100,
-		})
-		return protocol.Response{
-			ID:      req.ID,
-			Type:    protocol.TypeResponse,
-			Success: true,
-			Data:    data,
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
 		}
+		if cmdID == protocol.CmdAccountInfo {
+			var d []byte
+			d = writeI64(d, 12345)     // login
+			d = writeI64(d, 0)         // trade_mode
+			d = writeI64(d, 100)       // leverage
+			d = writeI64(d, 200)       // limit_orders
+			d = writeI64(d, 0)         // margin_so_mode
+			d = writeI64(d, 1)         // trade_allowed
+			d = writeI64(d, 1)         // trade_expert
+			d = writeI64(d, 0)         // margin_mode
+			d = writeI64(d, 2)         // currency_digits
+			d = writeI64(d, 0)         // fifo_close
+			d = writeF64(d, 10000.50)  // balance
+			d = writeF64(d, 0)         // credit
+			d = writeF64(d, 150.25)    // profit
+			d = writeF64(d, 10150.75)  // equity
+			d = writeF64(d, 500.0)     // margin
+			d = writeF64(d, 9650.75)   // free_margin
+			d = writeF64(d, 2030.15)   // margin_level
+			d = writeF64(d, 50.0)      // margin_so_call
+			d = writeF64(d, 30.0)      // margin_so_so
+			d = writeF64(d, 0)         // margin_initial
+			d = writeF64(d, 0)         // margin_maintenance
+			d = writeF64(d, 0)         // assets
+			d = writeF64(d, 0)         // liabilities
+			d = writeF64(d, 0)         // commission_blocked
+			d = writeStr(d, "Test User")
+			d = writeStr(d, "MetaQuotes-Demo")
+			d = writeStr(d, "USD")
+			d = writeStr(d, "MetaQuotes Ltd.")
+			return true, d
+		}
+		return false, nil
 	})
-	defer srv.close()
+	defer mock.Close()
 
-	client, err := mt5.NewClient(mt5.WithAddress(srv.addr()))
+	client, err := mt5.NewClientFromConn(mock)
 	if err != nil {
-		t.Fatalf("connect: %v", err)
+		t.Fatalf("new client: %v", err)
 	}
 	defer client.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	info, err := client.AccountInfo(ctx)
+	info, err := client.AccountInfo()
 	if err != nil {
 		t.Fatalf("account info: %v", err)
 	}
 	if info.Login != 12345 {
-		t.Errorf("expected login 12345, got %d", info.Login)
+		t.Errorf("login: expected 12345, got %d", info.Login)
 	}
-	if info.Balance != 10000.0 {
-		t.Errorf("expected balance 10000, got %f", info.Balance)
+	if info.Balance != 10000.50 {
+		t.Errorf("balance: expected 10000.50, got %f", info.Balance)
 	}
-}
-
-func TestSymbolInfo(t *testing.T) {
-	srv := newMockServer(t, func(req protocol.Request) protocol.Response {
-		data, _ := json.Marshal(mt5.SymbolInfo{
-			Name:   "EURUSD",
-			Bid:    1.0850,
-			Ask:    1.0852,
-			Digits: 5,
-			Point:  0.00001,
-		})
-		return protocol.Response{
-			ID:      req.ID,
-			Type:    protocol.TypeResponse,
-			Success: true,
-			Data:    data,
-		}
-	})
-	defer srv.close()
-
-	client, err := mt5.NewClient(mt5.WithAddress(srv.addr()))
-	if err != nil {
-		t.Fatalf("connect: %v", err)
+	if info.Leverage != 100 {
+		t.Errorf("leverage: expected 100, got %d", info.Leverage)
 	}
-	defer client.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	info, err := client.SymbolInfo(ctx, "EURUSD")
-	if err != nil {
-		t.Fatalf("symbol info: %v", err)
+	if !info.TradeAllowed {
+		t.Error("expected trade_allowed true")
 	}
-	if info.Name != "EURUSD" {
-		t.Errorf("expected EURUSD, got %s", info.Name)
+	if info.Currency != "USD" {
+		t.Errorf("currency: expected USD, got %s", info.Currency)
 	}
-	if info.Digits != 5 {
-		t.Errorf("expected 5 digits, got %d", info.Digits)
+	if info.Server != "MetaQuotes-Demo" {
+		t.Errorf("server: expected MetaQuotes-Demo, got %s", info.Server)
 	}
 }
 
-func TestCopyRatesFrom(t *testing.T) {
-	srv := newMockServer(t, func(req protocol.Request) protocol.Response {
-		rates := []mt5.Rate{
-			{Time: 1710000000, Open: 1.0850, High: 1.0860, Low: 1.0840, Close: 1.0855, TickVolume: 100},
-			{Time: 1710003600, Open: 1.0855, High: 1.0870, Low: 1.0845, Close: 1.0865, TickVolume: 150},
+func TestSymbolsTotal(t *testing.T) {
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
 		}
-		data, _ := json.Marshal(rates)
-		return protocol.Response{
-			ID:      req.ID,
-			Type:    protocol.TypeResponse,
-			Success: true,
-			Data:    data,
+		if cmdID == protocol.CmdSymbolsTotal {
+			return true, writeU32(nil, 250)
 		}
+		return false, nil
 	})
-	defer srv.close()
+	defer mock.Close()
 
-	client, err := mt5.NewClient(mt5.WithAddress(srv.addr()))
+	client, err := mt5.NewClientFromConn(mock)
 	if err != nil {
-		t.Fatalf("connect: %v", err)
+		t.Fatalf("new client: %v", err)
 	}
 	defer client.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	total, err := client.SymbolsTotal()
+	if err != nil {
+		t.Fatalf("symbols total: %v", err)
+	}
+	if total != 250 {
+		t.Errorf("expected 250, got %d", total)
+	}
+}
 
-	rates, err := client.CopyRatesFrom(ctx, "EURUSD", mt5.TimeframeH1, 1710000000, 2)
+func TestSymbolInfoTick(t *testing.T) {
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		if cmdID == protocol.CmdSymbolInfoTick {
+			var d []byte
+			d = writeI64(d, 1710000000)     // time
+			d = writeF64(d, 1.08500)        // bid
+			d = writeF64(d, 1.08520)        // ask
+			d = writeF64(d, 0)              // last
+			d = writeI64(d, 0)              // volume (u64)
+			d = writeI64(d, 1710000000123)  // time_msc
+			d = writeU32(d, 6)              // flags
+			return true, d
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := mt5.NewClientFromConn(mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	tick, err := client.SymbolInfoTick("EURUSD")
+	if err != nil {
+		t.Fatalf("symbol info tick: %v", err)
+	}
+	if tick.Bid != 1.08500 {
+		t.Errorf("bid: expected 1.08500, got %f", tick.Bid)
+	}
+	if tick.Ask != 1.08520 {
+		t.Errorf("ask: expected 1.08520, got %f", tick.Ask)
+	}
+	if tick.TimeMsc != 1710000000123 {
+		t.Errorf("time_msc: expected 1710000000123, got %d", tick.TimeMsc)
+	}
+}
+
+func TestCopyRatesFromPos(t *testing.T) {
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		if cmdID == protocol.CmdCopyRatesFromPos {
+			var d []byte
+			d = writeU32(d, 2) // count
+
+			// rate 1
+			d = writeI64(d, 1710000000)
+			d = writeF64(d, 1.0850)
+			d = writeF64(d, 1.0860)
+			d = writeF64(d, 1.0840)
+			d = writeF64(d, 1.0855)
+			d = writeI64(d, 100)
+			d = writeU32(d, 5)
+			d = writeI64(d, 0)
+
+			// rate 2
+			d = writeI64(d, 1710003600)
+			d = writeF64(d, 1.0855)
+			d = writeF64(d, 1.0870)
+			d = writeF64(d, 1.0845)
+			d = writeF64(d, 1.0865)
+			d = writeI64(d, 150)
+			d = writeU32(d, 3)
+			d = writeI64(d, 0)
+
+			return true, d
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := mt5.NewClientFromConn(mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	rates, err := client.CopyRatesFromPos("EURUSD", mt5.TimeframeH1, 0, 2)
 	if err != nil {
 		t.Fatalf("copy rates: %v", err)
 	}
@@ -235,152 +348,60 @@ func TestCopyRatesFrom(t *testing.T) {
 		t.Fatalf("expected 2 rates, got %d", len(rates))
 	}
 	if rates[0].Open != 1.0850 {
-		t.Errorf("expected open 1.0850, got %f", rates[0].Open)
+		t.Errorf("open: expected 1.0850, got %f", rates[0].Open)
 	}
-}
-
-func TestOrderSend(t *testing.T) {
-	srv := newMockServer(t, func(req protocol.Request) protocol.Response {
-		data, _ := json.Marshal(mt5.TradeResult{
-			Retcode: mt5.ErrCodeDone,
-			Deal:    100001,
-			Order:   200001,
-			Volume:  0.1,
-			Price:   1.0850,
-		})
-		return protocol.Response{
-			ID:      req.ID,
-			Type:    protocol.TypeResponse,
-			Success: true,
-			Data:    data,
-		}
-	})
-	defer srv.close()
-
-	client, err := mt5.NewClient(mt5.WithAddress(srv.addr()))
-	if err != nil {
-		t.Fatalf("connect: %v", err)
-	}
-	defer client.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	result, err := client.OrderSend(ctx, mt5.TradeRequest{
-		Action: mt5.TradeActionDeal,
-		Symbol: "EURUSD",
-		Volume: 0.1,
-		Type:   mt5.OrderTypeBuy,
-		Price:  1.0850,
-	})
-	if err != nil {
-		t.Fatalf("order send: %v", err)
-	}
-	if result.Retcode != mt5.ErrCodeDone {
-		t.Errorf("expected retcode %d, got %d", mt5.ErrCodeDone, result.Retcode)
-	}
-	if result.Deal != 100001 {
-		t.Errorf("expected deal 100001, got %d", result.Deal)
+	if rates[1].Close != 1.0865 {
+		t.Errorf("close: expected 1.0865, got %f", rates[1].Close)
 	}
 }
 
 func TestErrorResponse(t *testing.T) {
-	srv := newMockServer(t, func(req protocol.Request) protocol.Response {
-		return protocol.Response{
-			ID:      req.ID,
-			Type:    protocol.TypeResponse,
-			Success: false,
-			Error: &protocol.ResponseError{
-				Code:    mt5.ErrCodeInvalidParams,
-				Message: "invalid parameters",
-			},
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
 		}
+		var d []byte
+		d = writeU32(d, uint32(0xFFFFFFFF-12)) // error code -13
+		d = writeStr(d, "invalid parameters")
+		return false, d
 	})
-	defer srv.close()
+	defer mock.Close()
 
-	client, err := mt5.NewClient(mt5.WithAddress(srv.addr()))
+	client, err := mt5.NewClientFromConn(mock)
 	if err != nil {
-		t.Fatalf("connect: %v", err)
+		t.Fatalf("new client: %v", err)
 	}
 	defer client.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err = client.AccountInfo(ctx)
+	_, err = client.SymbolsTotal()
 	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-
-	mt5Err, ok := err.(*mt5.MT5Error)
-	if !ok {
-		t.Fatalf("expected MT5Error, got %T: %v", err, err)
-	}
-	if mt5Err.Code != mt5.ErrCodeInvalidParams {
-		t.Errorf("expected code %d, got %d", mt5.ErrCodeInvalidParams, mt5Err.Code)
+		t.Fatal("expected error")
 	}
 }
 
-func TestMultipleConcurrentRequests(t *testing.T) {
-	srv := newMockServer(t, func(req protocol.Request) protocol.Response {
-		var data json.RawMessage
-		switch req.Action {
-		case "account_info":
-			data, _ = json.Marshal(mt5.AccountInfo{Login: 12345, Balance: 10000})
-		case "symbols_total":
-			data, _ = json.Marshal(42)
-		default:
-			data, _ = json.Marshal(nil)
+func TestPositionsTotal(t *testing.T) {
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
 		}
-		return protocol.Response{
-			ID:      req.ID,
-			Type:    protocol.TypeResponse,
-			Success: true,
-			Data:    data,
+		if cmdID == protocol.CmdPositionsTotal {
+			return true, writeU32(nil, 3)
 		}
+		return false, nil
 	})
-	defer srv.close()
+	defer mock.Close()
 
-	client, err := mt5.NewClient(mt5.WithAddress(srv.addr()))
+	client, err := mt5.NewClientFromConn(mock)
 	if err != nil {
-		t.Fatalf("connect: %v", err)
+		t.Fatalf("new client: %v", err)
 	}
 	defer client.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	errCh := make(chan error, 2)
-
-	go func() {
-		info, err := client.AccountInfo(ctx)
-		if err != nil {
-			errCh <- fmt.Errorf("account: %w", err)
-			return
-		}
-		if info.Login != 12345 {
-			errCh <- fmt.Errorf("expected login 12345, got %d", info.Login)
-			return
-		}
-		errCh <- nil
-	}()
-
-	go func() {
-		total, err := client.SymbolsTotal(ctx)
-		if err != nil {
-			errCh <- fmt.Errorf("symbols: %w", err)
-			return
-		}
-		if total != 42 {
-			errCh <- fmt.Errorf("expected 42 symbols, got %d", total)
-			return
-		}
-		errCh <- nil
-	}()
-
-	for i := 0; i < 2; i++ {
-		if err := <-errCh; err != nil {
-			t.Error(err)
-		}
+	total, err := client.PositionsTotal()
+	if err != nil {
+		t.Fatalf("positions total: %v", err)
+	}
+	if total != 3 {
+		t.Errorf("expected 3, got %d", total)
 	}
 }

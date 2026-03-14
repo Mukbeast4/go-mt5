@@ -11,7 +11,9 @@
       "WebFetch(domain:pypi.org)",
       "WebFetch(domain:www.forexfactory.com)",
       "WebFetch(domain:www.metatrader5.com)",
-      "Bash(go build:*)"
+      "Bash(go build:*)",
+      "Bash(go vet:*)",
+      "Bash(go test:*)"
     ]
   }
 }

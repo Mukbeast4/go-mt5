@@ -1,29 +1,71 @@
 package protocol
 
-import "encoding/json"
-
-const (
-	TypeResponse = "response"
-	TypeEvent    = "event"
+import (
+	"encoding/binary"
+	"fmt"
+	"io"
 )
 
-type Request struct {
-	ID     string      `json:"id"`
-	Action string      `json:"action"`
-	Params interface{} `json:"params,omitempty"`
+const maxPayloadSize = 64 * 1024 * 1024
+
+func WriteRequest(w io.Writer, cmdID uint32, params []byte) error {
+	payloadLen := uint32(4 + len(params))
+	header := make([]byte, 4)
+	binary.LittleEndian.PutUint32(header, payloadLen)
+	if _, err := w.Write(header); err != nil {
+		return fmt.Errorf("write payload length: %w", err)
+	}
+
+	cmd := make([]byte, 4)
+	binary.LittleEndian.PutUint32(cmd, cmdID)
+	if _, err := w.Write(cmd); err != nil {
+		return fmt.Errorf("write command id: %w", err)
+	}
+
+	if len(params) > 0 {
+		if _, err := w.Write(params); err != nil {
+			return fmt.Errorf("write params: %w", err)
+		}
+	}
+	return nil
 }
 
 type Response struct {
-	ID      string           `json:"id,omitempty"`
-	Type    string           `json:"type,omitempty"`
-	Action  string           `json:"action,omitempty"`
-	Success bool             `json:"success"`
-	Data    json.RawMessage  `json:"data,omitempty"`
-	Error   *ResponseError   `json:"error,omitempty"`
-	Event   string           `json:"event,omitempty"`
+	CmdID   uint32
+	Success bool
+	Data    []byte
 }
 
-type ResponseError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+func ReadResponse(r io.Reader) (*Response, error) {
+	lenBuf := make([]byte, 4)
+	if _, err := io.ReadFull(r, lenBuf); err != nil {
+		return nil, fmt.Errorf("read payload length: %w", err)
+	}
+	payloadLen := binary.LittleEndian.Uint32(lenBuf)
+
+	if payloadLen > maxPayloadSize {
+		return nil, fmt.Errorf("payload too large: %d bytes", payloadLen)
+	}
+	if payloadLen < 8 {
+		return nil, fmt.Errorf("payload too small: %d bytes", payloadLen)
+	}
+
+	payload := make([]byte, payloadLen)
+	if _, err := io.ReadFull(r, payload); err != nil {
+		return nil, fmt.Errorf("read payload: %w", err)
+	}
+
+	cmdID := binary.LittleEndian.Uint32(payload[0:4])
+	success := binary.LittleEndian.Uint32(payload[4:8])
+
+	resp := &Response{
+		CmdID:   cmdID,
+		Success: success != 0,
+	}
+
+	if len(payload) > 8 {
+		resp.Data = payload[8:]
+	}
+
+	return resp, nil
 }

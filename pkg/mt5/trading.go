@@ -1,120 +1,191 @@
 package mt5
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
 )
 
-func (c *Client) OrderSend(ctx context.Context, request TradeRequest) (*TradeResult, error) {
-	resp, err := c.send(ctx, protocol.ActionOrderSend, request)
+func (c *Client) OrderSend(request TradeRequest) (*TradeResult, error) {
+	w := protocol.NewWriter()
+	w.WriteU32(uint32(request.Action))
+	w.WriteI64(request.Magic)
+	w.WriteI64(request.Order)
+	w.WriteString(request.Symbol)
+	w.WriteF64(request.Volume)
+	w.WriteF64(request.Price)
+	w.WriteF64(request.StopLimit)
+	w.WriteF64(request.SL)
+	w.WriteF64(request.TP)
+	w.WriteU32(uint32(request.Deviation))
+	w.WriteU32(uint32(request.Type))
+	w.WriteU32(uint32(request.TypeFilling))
+	w.WriteU32(uint32(request.TypeTime))
+	w.WriteI64(request.Expiration)
+	w.WriteString(request.Comment)
+	w.WriteI64(request.Position)
+	w.WriteI64(request.PositionBy)
+
+	data, err := c.SendRaw(200, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
-	var result TradeResult
-	if err := json.Unmarshal(resp.Data, &result); err != nil {
-		return nil, fmt.Errorf("decode trade result: %w", err)
+
+	r := protocol.NewReader(data)
+	result := &TradeResult{
+		Retcode:    r.ReadU32(),
+		Deal:       r.ReadI64(),
+		Order:      r.ReadI64(),
+		Volume:     r.ReadF64(),
+		Price:      r.ReadF64(),
+		Bid:        r.ReadF64(),
+		Ask:        r.ReadF64(),
+		Comment:    r.ReadString(),
+		RequestID:  r.ReadU32(),
+		RetcodeExt: r.ReadI32(),
 	}
-	return &result, nil
+	if r.Err() != nil {
+		return nil, fmt.Errorf("decode trade result: %w", r.Err())
+	}
+	return result, nil
 }
 
-func (c *Client) OrderCheck(ctx context.Context, request TradeRequest) (*CheckResult, error) {
-	resp, err := c.send(ctx, protocol.ActionOrderCheck, request)
+func (c *Client) OrderCheck(request TradeRequest) (*CheckResult, error) {
+	w := protocol.NewWriter()
+	w.WriteU32(uint32(request.Action))
+	w.WriteString(request.Symbol)
+	w.WriteF64(request.Volume)
+	w.WriteF64(request.Price)
+	w.WriteF64(request.SL)
+	w.WriteF64(request.TP)
+	w.WriteU32(uint32(request.Deviation))
+	w.WriteU32(uint32(request.Type))
+	w.WriteU32(uint32(request.TypeFilling))
+
+	data, err := c.SendRaw(201, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
-	var result CheckResult
-	if err := json.Unmarshal(resp.Data, &result); err != nil {
-		return nil, fmt.Errorf("decode check result: %w", err)
+
+	r := protocol.NewReader(data)
+	result := &CheckResult{
+		Retcode:     r.ReadU32(),
+		Balance:     r.ReadF64(),
+		Equity:      r.ReadF64(),
+		Profit:      r.ReadF64(),
+		Margin:      r.ReadF64(),
+		MarginFree:  r.ReadF64(),
+		MarginLevel: r.ReadF64(),
+		Comment:     r.ReadString(),
 	}
-	return &result, nil
+	if r.Err() != nil {
+		return nil, fmt.Errorf("decode check result: %w", r.Err())
+	}
+	return result, nil
 }
 
-type calcMarginParams struct {
-	Action TradeAction `json:"action"`
-	Symbol string      `json:"symbol"`
-	Volume float64     `json:"volume"`
-	Price  float64     `json:"price"`
-}
+func (c *Client) OrderCalcMargin(action TradeAction, symbol string, volume, price float64) (float64, error) {
+	w := protocol.NewWriter()
+	w.WriteU32(uint32(action))
+	w.WriteString(symbol)
+	w.WriteF64(volume)
+	w.WriteF64(price)
 
-func (c *Client) OrderCalcMargin(ctx context.Context, action TradeAction, symbol string, volume, price float64) (float64, error) {
-	params := &calcMarginParams{
-		Action: action,
-		Symbol: symbol,
-		Volume: volume,
-		Price:  price,
-	}
-	resp, err := c.send(ctx, protocol.ActionOrderCalcMargin, params)
+	data, err := c.SendRaw(202, w.Bytes())
 	if err != nil {
 		return 0, err
 	}
-	var margin float64
-	if err := json.Unmarshal(resp.Data, &margin); err != nil {
-		return 0, fmt.Errorf("decode margin: %w", err)
+
+	r := protocol.NewReader(data)
+	margin := r.ReadF64()
+	if r.Err() != nil {
+		return 0, fmt.Errorf("decode margin: %w", r.Err())
 	}
 	return margin, nil
 }
 
-type calcProfitParams struct {
-	Action    TradeAction `json:"action"`
-	Symbol    string      `json:"symbol"`
-	Volume    float64     `json:"volume"`
-	PriceOpen float64     `json:"price_open"`
-	PriceClose float64    `json:"price_close"`
-}
+func (c *Client) OrderCalcProfit(action TradeAction, symbol string, volume, priceOpen, priceClose float64) (float64, error) {
+	w := protocol.NewWriter()
+	w.WriteU32(uint32(action))
+	w.WriteString(symbol)
+	w.WriteF64(volume)
+	w.WriteF64(priceOpen)
+	w.WriteF64(priceClose)
 
-func (c *Client) OrderCalcProfit(ctx context.Context, action TradeAction, symbol string, volume, priceOpen, priceClose float64) (float64, error) {
-	params := &calcProfitParams{
-		Action:     action,
-		Symbol:     symbol,
-		Volume:     volume,
-		PriceOpen:  priceOpen,
-		PriceClose: priceClose,
-	}
-	resp, err := c.send(ctx, protocol.ActionOrderCalcProfit, params)
+	data, err := c.SendRaw(203, w.Bytes())
 	if err != nil {
 		return 0, err
 	}
-	var profit float64
-	if err := json.Unmarshal(resp.Data, &profit); err != nil {
-		return 0, fmt.Errorf("decode profit: %w", err)
+
+	r := protocol.NewReader(data)
+	profit := r.ReadF64()
+	if r.Err() != nil {
+		return 0, fmt.Errorf("decode profit: %w", r.Err())
 	}
 	return profit, nil
 }
 
-func (c *Client) OrdersTotal(ctx context.Context) (int, error) {
-	resp, err := c.send(ctx, protocol.ActionOrdersTotal, nil)
+func (c *Client) OrdersTotal() (int, error) {
+	resp, err := c.send(protocol.CmdOrdersTotal, nil)
 	if err != nil {
 		return 0, err
 	}
-	var total int
-	if err := json.Unmarshal(resp.Data, &total); err != nil {
-		return 0, fmt.Errorf("decode orders total: %w", err)
+	r := protocol.NewReader(resp.Data)
+	total := r.ReadU32()
+	if r.Err() != nil {
+		return 0, fmt.Errorf("decode orders total: %w", r.Err())
 	}
-	return total, nil
+	return int(total), nil
 }
 
-type ordersGetParams struct {
-	Symbol string `json:"symbol,omitempty"`
-	Group  string `json:"group,omitempty"`
-	Ticket int64  `json:"ticket,omitempty"`
-}
+func (c *Client) OrdersGet(symbol string) ([]Order, error) {
+	w := protocol.NewWriter()
+	w.WriteString(symbol)
 
-func (c *Client) OrdersGet(ctx context.Context, symbol string, group string, ticket int64) ([]Order, error) {
-	params := &ordersGetParams{
-		Symbol: symbol,
-		Group:  group,
-		Ticket: ticket,
-	}
-	resp, err := c.send(ctx, protocol.ActionOrdersGet, params)
+	data, err := c.SendRaw(131, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
-	var orders []Order
-	if err := json.Unmarshal(resp.Data, &orders); err != nil {
-		return nil, fmt.Errorf("decode orders: %w", err)
+
+	return decodeOrders(data)
+}
+
+func decodeOrders(data []byte) ([]Order, error) {
+	r := protocol.NewReader(data)
+	count := int(r.ReadU32())
+
+	orders := make([]Order, 0, count)
+	for i := 0; i < count; i++ {
+		order := Order{
+			Ticket:         r.ReadI64(),
+			TimeSetup:      r.ReadI64(),
+			TimeSetupMsc:   r.ReadI64(),
+			TimeDone:       r.ReadI64(),
+			TimeDoneMsc:    r.ReadI64(),
+			TimeExpiration: r.ReadI64(),
+			Type:           OrderType(r.ReadI64()),
+			TypeTime:       OrderTime(r.ReadI64()),
+			TypeFilling:    OrderFilling(r.ReadI64()),
+			State:          r.ReadI64(),
+			Magic:          r.ReadI64(),
+			PositionID:     r.ReadI64(),
+			PositionByID:   r.ReadI64(),
+			Reason:         r.ReadI64(),
+			VolumeInitial:  r.ReadF64(),
+			VolumeCurrent:  r.ReadF64(),
+			PriceOpen:      r.ReadF64(),
+			PriceCurrent:   r.ReadF64(),
+			PriceSL:        r.ReadF64(),
+			PriceTP:        r.ReadF64(),
+			PriceStopLimit: r.ReadF64(),
+			Symbol:         r.ReadString(),
+			Comment:        r.ReadString(),
+			ExternalID:     r.ReadString(),
+		}
+		if r.Err() != nil {
+			return nil, fmt.Errorf("decode order %d: %w", i, r.Err())
+		}
+		orders = append(orders, order)
 	}
 	return orders, nil
 }

@@ -3,41 +3,49 @@ package mt5
 import "fmt"
 
 const (
-	ErrCodeOK                  = 10009
-	ErrCodeDone                = 10008
-	ErrCodeRequote             = 10004
-	ErrCodeReject              = 10006
-	ErrCodeCancel              = 10007
-	ErrCodeInvalidFill         = 10030
-	ErrCodeConnection          = 10031
-	ErrCodeTimeout             = 10012
-	ErrCodeInvalidParams       = 10013
-	ErrCodeInvalidOrder        = 10014
-	ErrCodeInvalidVolume       = 10015
-	ErrCodeInvalidPrice        = 10016
-	ErrCodeInvalidStops        = 10017
-	ErrCodeTradeDisabled       = 10018
-	ErrCodeMarketClosed        = 10019
-	ErrCodeInsufficientFunds   = 10020
-	ErrCodePriceChanged        = 10021
-	ErrCodeNoQuotes            = 10024
-	ErrCodeOrderLocked         = 10025
-	ErrCodeLongOnly            = 10027
-	ErrCodeTooManyOrders       = 10028
-	ErrCodeCloseOrderExist     = 10029
-	ErrCodeAutoTradingDisabled = 10032
-	ErrCodePositionClosed      = 10033
-	ErrCodeLimitVolume         = 10034
+	ResOK                   = 1
+	ResEFail                = -1
+	ResEInvalidParams       = -2
+	ResENoMemory            = -3
+	ResENotFound            = -4
+	ResEInvalidVersion      = -5
+	ResEAuthFailed          = -6
+	ResEUnsupported         = -7
+	ResEAutoTradingDisabled = -8
+	ResEInternalFail        = -10000
+	ResEInternalFailSend    = -10001
+	ResEInternalFailReceive = -10002
+	ResEInternalFailInit    = -10003
+	ResEInternalFailConnect = -10004
+	ResEInternalFailTimeout = -10005
+
+	RetcodeOK              = 10009
+	RetcodeDone            = 10008
+	RetcodeRequote         = 10004
+	RetcodeReject          = 10006
+	RetcodeCancel          = 10007
+	RetcodeInvalidFill     = 10030
+	RetcodeInvalidVolume   = 10015
+	RetcodeInvalidPrice    = 10016
+	RetcodeInvalidStops    = 10017
+	RetcodeTradeDisabled   = 10018
+	RetcodeMarketClosed    = 10019
+	RetcodeNoQuotes        = 10024
+	RetcodeTooManyOrders   = 10028
 )
 
 type MT5Error struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Code    int
+	Message string
 }
 
 func (e *MT5Error) Error() string {
 	return fmt.Sprintf("mt5 error %d: %s", e.Code, e.Message)
 }
 
-var ErrNotConnected = fmt.Errorf("mt5: not connected")
-var ErrTimeout = fmt.Errorf("mt5: request timeout")
+var (
+	ErrNotConnected = fmt.Errorf("mt5: not connected")
+	ErrTimeout      = fmt.Errorf("mt5: request timeout")
+	ErrWindows      = fmt.Errorf("mt5: native pipe requires Windows")
+	ErrFailed       = fmt.Errorf("mt5: request failed")
+)
