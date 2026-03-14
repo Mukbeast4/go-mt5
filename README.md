@@ -1,26 +1,23 @@
 # go-mt5
 
-Native Go binding for MetaTrader 5. Communicates directly with the MT5 terminal via Windows Named Pipe IPC, the same mechanism used by the official Python `MetaTrader5` package. No Expert Advisor needed.
+[![Go Reference](https://pkg.go.dev/badge/github.com/mukbeast4/go-mt5.svg)](https://pkg.go.dev/github.com/mukbeast4/go-mt5)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mukbeast4/go-mt5)](https://goreportcard.com/report/github.com/mukbeast4/go-mt5)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Mukbeast4/go-mt5)](https://github.com/Mukbeast4/go-mt5/releases)
 
-## Architecture
+Native Go client for MetaTrader 5. Communicates directly with the MT5 terminal via Windows Named Pipe IPC, the same mechanism used by the official Python `MetaTrader5` package. No Expert Advisor needed.
 
-```
-Go Client --Named Pipe IPC--> terminal64.exe (MT5)
-```
+## Features
 
-The library reverse-engineered the proprietary binary protocol used by MetaQuotes between `MetaTrader5.pyd` and `terminal64.exe`. It connects to the same named pipe, performs the same handshake, and speaks the same binary framing.
-
-### Protocol
-
-```
-Request:  [payload_len:LE32][cmd_id:LE32][params...]
-Response: [payload_len:LE32][cmd_echo:LE32][success:LE32][data...]
-```
-
-- Integers: LE32/LE64
-- Floats: IEEE 754 double LE64
-- Strings: [char_count:LE32][UTF-16LE data]
-- Booleans: LE64 (0/1)
+- Direct IPC connection to `terminal64.exe` via Windows Named Pipes
+- Reverse-engineered binary protocol (same as `MetaTrader5.pyd`)
+- Account and terminal information
+- Real-time symbol info and tick data
+- Historical rates and ticks (OHLCV, copy from position/date/range)
+- Order management (send, check, calc margin/profit)
+- Position and history queries (orders, deals)
+- Streaming tick subscriptions
+- Zero external dependencies (only `golang.org/x/sys`)
 
 ## Requirements
 
@@ -34,59 +31,39 @@ Response: [payload_len:LE32][cmd_echo:LE32][success:LE32][data...]
 go get github.com/mukbeast4/go-mt5
 ```
 
-## Usage
+## Quick Start
 
 ```go
 package main
 
 import (
-    "fmt"
-    "log"
+	"fmt"
+	"log"
 
-    gomt5 "github.com/mukbeast4/go-mt5"
+	gomt5 "github.com/mukbeast4/go-mt5"
 )
 
 func main() {
-    // Auto-discovers the MT5 named pipe
-    client, err := gomt5.NewClient()
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer client.Close()
+	client, err := gomt5.NewClient()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
 
-    fmt.Printf("Connected to MT5 build %d\n", client.Build())
+	fmt.Printf("Connected to MT5 build %d\n", client.Build())
 
-    account, err := client.AccountInfo()
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Printf("Account: %s Balance: %.2f %s\n",
-        account.Name, account.Balance, account.Currency)
+	account, err := client.AccountInfo()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Account: %s Balance: %.2f %s\n",
+		account.Name, account.Balance, account.Currency)
 
-    tick, err := client.SymbolInfoTick("EURUSD")
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Printf("EURUSD Bid: %.5f Ask: %.5f\n", tick.Bid, tick.Ask)
-
-    rates, err := client.CopyRatesFromPos("EURUSD", gomt5.TimeframeH1, 0, 100)
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Printf("Got %d H1 rates\n", len(rates))
-
-    result, err := client.OrderSend(gomt5.TradeRequest{
-        Action:    gomt5.TradeActionDeal,
-        Symbol:    "EURUSD",
-        Volume:    0.01,
-        Type:      gomt5.OrderTypeBuy,
-        Price:     tick.Ask,
-        Deviation: 10,
-    })
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Printf("Order: %d Deal: %d\n", result.Order, result.Deal)
+	tick, err := client.SymbolInfoTick("EURUSD")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("EURUSD Bid: %.5f Ask: %.5f\n", tick.Bid, tick.Ask)
 }
 ```
 
@@ -101,7 +78,20 @@ func main() {
 | Trading | `OrderSend()`, `OrderCheck()`, `OrderCalcMargin()`, `OrderCalcProfit()`, `OrdersTotal()`, `OrdersGet()` |
 | Positions | `PositionsTotal()`, `PositionsGet()` |
 | History | `HistoryOrdersTotal()`, `HistoryOrdersGet()`, `HistoryDealsTotal()`, `HistoryDealsGet()` |
+| Streaming | `SubscribeTicks()`, `UnsubscribeTicks()` |
 | Debug | `SendRaw()` |
+
+## Protocol
+
+```
+Request:  [payload_len:LE32][cmd_id:LE32][params...]
+Response: [payload_len:LE32][cmd_echo:LE32][success:LE32][data...]
+```
+
+- Integers: LE32/LE64
+- Floats: IEEE 754 double LE64
+- Strings: `[char_count:LE32][UTF-16LE data]`
+- Booleans: LE64 (0/1)
 
 ## Testing
 
@@ -118,10 +108,10 @@ go-mt5/
 ├── *.go                     # Public API (package gomt5)
 ├── internal/
 │   ├── protocol/            # Binary codec + message framing
-│   └── pipe/                # Windows named pipe connection
-├── tools/
-│   ├── sniffer/             # Pipe traffic capture tools
-│   └── analyzer/            # PYD binary analysis tools
-├── mql5/                    # EA bridge (alternative approach)
-└── docs/                    # Reverse engineering documentation
+│   └── pipe/                # Windows named pipe transport
+└── mql5/                    # EA bridge (alternative approach)
 ```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
