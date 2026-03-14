@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.mql5.com)",
+      "WebSearch",
+      "Bash(go mod:*)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:deepwiki.com)",
+      "WebFetch(domain:pypi.org)",
+      "WebFetch(domain:www.forexfactory.com)",
+      "WebFetch(domain:www.metatrader5.com)",
+      "Bash(go build:*)"
+    ]
+  }
+}

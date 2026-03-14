@@ -1,0 +1,27 @@
+CLAUDE.md
+claude.md
+logs
+*.log
+.env
+.env.*
+!.env.example
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+vendor/
+
+# RE trace outputs
+mt5_pipe_trace/
+mt5_pipe_deep_trace/
+mt5_mitm_trace/
+mt5_pyd_analysis/
+mt5_procmon_analysis/
+*.pyd
+*.bin
