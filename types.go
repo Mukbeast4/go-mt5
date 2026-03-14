@@ -287,7 +287,7 @@ type Deal struct {
 	Reason     int64     `json:"reason"`
 	Volume     float64   `json:"volume"`
 	Price      float64   `json:"price"`
-	Commission float64  `json:"commission"`
+	Commission float64   `json:"commission"`
 	Swap       float64   `json:"swap"`
 	Profit     float64   `json:"profit"`
 	Fee        float64   `json:"fee"`
