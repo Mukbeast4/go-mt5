@@ -9,19 +9,12 @@ import (
 const maxPayloadSize = 64 * 1024 * 1024
 
 func WriteRequest(w io.Writer, cmdID uint32, params []byte) error {
-	payloadLen := uint32(4 + len(params))
-	header := make([]byte, 4)
-	binary.LittleEndian.PutUint32(header, payloadLen)
+	header := make([]byte, 8)
+	binary.LittleEndian.PutUint32(header[:4], uint32(4+len(params)))
+	binary.LittleEndian.PutUint32(header[4:], cmdID)
 	if _, err := w.Write(header); err != nil {
-		return fmt.Errorf("write payload length: %w", err)
+		return fmt.Errorf("write header: %w", err)
 	}
-
-	cmd := make([]byte, 4)
-	binary.LittleEndian.PutUint32(cmd, cmdID)
-	if _, err := w.Write(cmd); err != nil {
-		return fmt.Errorf("write command id: %w", err)
-	}
-
 	if len(params) > 0 {
 		if _, err := w.Write(params); err != nil {
 			return fmt.Errorf("write params: %w", err)

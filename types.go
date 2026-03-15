@@ -182,6 +182,13 @@ type Rate struct {
 	RealVolume int64   `json:"real_volume"`
 }
 
+type BookEntry struct {
+	Type       BookType `json:"type"`
+	Price      float64  `json:"price"`
+	Volume     int64    `json:"volume"`
+	VolumeReal float64  `json:"volume_real"`
+}
+
 type TradeRequest struct {
 	Action      TradeAction  `json:"action"`
 	Magic       int64        `json:"magic,omitempty"`
@@ -213,6 +220,10 @@ type TradeResult struct {
 	Comment    string  `json:"comment"`
 	RequestID  uint32  `json:"request_id"`
 	RetcodeExt int32   `json:"retcode_external"`
+}
+
+func (r *TradeResult) IsOK() bool {
+	return r.Retcode == RetcodeDone || r.Retcode == RetcodeOK
 }
 
 type CheckResult struct {
@@ -294,4 +305,24 @@ type Deal struct {
 	Symbol     string    `json:"symbol"`
 	Comment    string    `json:"comment"`
 	ExternalID string    `json:"external_id"`
+}
+
+type OrderFilter struct {
+	Symbol string
+	Ticket int64
+	Group  string
+}
+
+type PositionFilter struct {
+	Symbol string
+	Ticket int64
+	Group  string
+}
+
+type HistoryFilter struct {
+	DateFrom int64
+	DateTo   int64
+	Symbol   string
+	Ticket   int64
+	Group    string
 }

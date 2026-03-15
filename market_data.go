@@ -1,34 +1,20 @@
 package gomt5
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
 )
 
-func (c *Client) CopyRatesFromPos(symbol string, timeframe Timeframe, startPos, count int) ([]Rate, error) {
+func (c *Client) CopyRatesFromPos(ctx context.Context, symbol string, timeframe Timeframe, startPos, count int) ([]Rate, error) {
 	w := protocol.NewWriter()
 	w.WriteString(symbol)
 	w.WriteU32(uint32(timeframe))
 	w.WriteU32(uint32(startPos))
 	w.WriteU32(uint32(count))
 
-	resp, err := c.send(protocol.CmdCopyRatesFromPos, w.Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	return decodeRates(resp.Data)
-}
-
-func (c *Client) CopyRatesFrom(symbol string, timeframe Timeframe, dateFrom int64, count int) ([]Rate, error) {
-	w := protocol.NewWriter()
-	w.WriteString(symbol)
-	w.WriteU32(uint32(timeframe))
-	w.WriteI64(dateFrom)
-	w.WriteU32(uint32(count))
-
-	data, err := c.SendRaw(108, w.Bytes())
+	data, err := c.SendRaw(ctx, protocol.CmdCopyRatesFromPos, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -36,14 +22,14 @@ func (c *Client) CopyRatesFrom(symbol string, timeframe Timeframe, dateFrom int6
 	return decodeRates(data)
 }
 
-func (c *Client) CopyRatesRange(symbol string, timeframe Timeframe, dateFrom, dateTo int64) ([]Rate, error) {
+func (c *Client) CopyRatesFrom(ctx context.Context, symbol string, timeframe Timeframe, dateFrom int64, count int) ([]Rate, error) {
 	w := protocol.NewWriter()
 	w.WriteString(symbol)
 	w.WriteU32(uint32(timeframe))
 	w.WriteI64(dateFrom)
-	w.WriteI64(dateTo)
+	w.WriteU32(uint32(count))
 
-	data, err := c.SendRaw(109, w.Bytes())
+	data, err := c.SendRaw(ctx, protocol.CmdCopyRatesFrom, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -51,29 +37,44 @@ func (c *Client) CopyRatesRange(symbol string, timeframe Timeframe, dateFrom, da
 	return decodeRates(data)
 }
 
-func (c *Client) CopyTicksFrom(symbol string, dateFrom int64, count int, flags CopyTicksFlag) ([]Tick, error) {
+func (c *Client) CopyRatesRange(ctx context.Context, symbol string, timeframe Timeframe, dateFrom, dateTo int64) ([]Rate, error) {
+	w := protocol.NewWriter()
+	w.WriteString(symbol)
+	w.WriteU32(uint32(timeframe))
+	w.WriteI64(dateFrom)
+	w.WriteI64(dateTo)
+
+	data, err := c.SendRaw(ctx, protocol.CmdCopyRatesRange, w.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	return decodeRates(data)
+}
+
+func (c *Client) CopyTicksFrom(ctx context.Context, symbol string, dateFrom int64, count int, flags CopyTicksFlag) ([]Tick, error) {
 	w := protocol.NewWriter()
 	w.WriteString(symbol)
 	w.WriteI64(dateFrom)
 	w.WriteU32(uint32(count))
 	w.WriteU32(uint32(flags))
 
-	resp, err := c.send(protocol.CmdCopyTicksFrom, w.Bytes())
+	data, err := c.SendRaw(ctx, protocol.CmdCopyTicksFrom, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
 
-	return decodeTicks(resp.Data)
+	return decodeTicks(data)
 }
 
-func (c *Client) CopyTicksRange(symbol string, dateFrom, dateTo int64, flags CopyTicksFlag) ([]Tick, error) {
+func (c *Client) CopyTicksRange(ctx context.Context, symbol string, dateFrom, dateTo int64, flags CopyTicksFlag) ([]Tick, error) {
 	w := protocol.NewWriter()
 	w.WriteString(symbol)
 	w.WriteI64(dateFrom)
 	w.WriteI64(dateTo)
 	w.WriteU32(uint32(flags))
 
-	data, err := c.SendRaw(105, w.Bytes())
+	data, err := c.SendRaw(ctx, protocol.CmdCopyTicksRange, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
