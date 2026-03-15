@@ -1,10 +1,12 @@
 package gomt5_test
 
 import (
+	"context"
 	"encoding/binary"
 	"io"
 	"math"
 	"testing"
+	"time"
 	"unicode/utf16"
 
 	gomt5 "github.com/mukbeast4/go-mt5"
@@ -22,7 +24,7 @@ type mockPipe struct {
 	done    chan struct{}
 }
 
-func newMockPipe(t *testing.T, handler func(cmdID uint32, params []byte) (bool, []byte)) *mockPipe {
+func newMockPipe(t testing.TB, handler func(cmdID uint32, params []byte) (bool, []byte)) *mockPipe {
 	t.Helper()
 	clientRead, serverWrite := io.Pipe()
 	serverRead, clientWrite := io.Pipe()
@@ -55,7 +57,7 @@ func (m *mockPipe) Close() error {
 	return nil
 }
 
-func (m *mockPipe) serve(t *testing.T) {
+func (m *mockPipe) serve(t testing.TB) {
 	for {
 		select {
 		case <-m.done:
@@ -126,6 +128,7 @@ func writeStr(buf []byte, s string) []byte {
 }
 
 func TestInitAndVersion(t *testing.T) {
+	ctx := context.Background()
 	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
 		switch cmdID {
 		case protocol.CmdInitialize:
@@ -141,7 +144,7 @@ func TestInitAndVersion(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := gomt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(ctx, mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
@@ -151,7 +154,7 @@ func TestInitAndVersion(t *testing.T) {
 		t.Errorf("expected build 5684, got %d", client.Build())
 	}
 
-	ver, err := client.Version()
+	ver, err := client.Version(ctx)
 	if err != nil {
 		t.Fatalf("version: %v", err)
 	}
@@ -161,6 +164,7 @@ func TestInitAndVersion(t *testing.T) {
 }
 
 func TestAccountInfo(t *testing.T) {
+	ctx := context.Background()
 	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
 		if cmdID == protocol.CmdInitialize {
 			return true, writeU32(nil, 5684)
@@ -201,13 +205,13 @@ func TestAccountInfo(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := gomt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(ctx, mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
 	defer client.Close()
 
-	info, err := client.AccountInfo()
+	info, err := client.AccountInfo(ctx)
 	if err != nil {
 		t.Fatalf("account info: %v", err)
 	}
@@ -232,6 +236,7 @@ func TestAccountInfo(t *testing.T) {
 }
 
 func TestSymbolsTotal(t *testing.T) {
+	ctx := context.Background()
 	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
 		if cmdID == protocol.CmdInitialize {
 			return true, writeU32(nil, 5684)
@@ -243,13 +248,13 @@ func TestSymbolsTotal(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := gomt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(ctx, mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
 	defer client.Close()
 
-	total, err := client.SymbolsTotal()
+	total, err := client.SymbolsTotal(ctx)
 	if err != nil {
 		t.Fatalf("symbols total: %v", err)
 	}
@@ -259,6 +264,7 @@ func TestSymbolsTotal(t *testing.T) {
 }
 
 func TestSymbolInfoTick(t *testing.T) {
+	ctx := context.Background()
 	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
 		if cmdID == protocol.CmdInitialize {
 			return true, writeU32(nil, 5684)
@@ -278,13 +284,13 @@ func TestSymbolInfoTick(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := gomt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(ctx, mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
 	defer client.Close()
 
-	tick, err := client.SymbolInfoTick("EURUSD")
+	tick, err := client.SymbolInfoTick(ctx, "EURUSD")
 	if err != nil {
 		t.Fatalf("symbol info tick: %v", err)
 	}
@@ -300,6 +306,7 @@ func TestSymbolInfoTick(t *testing.T) {
 }
 
 func TestCopyRatesFromPos(t *testing.T) {
+	ctx := context.Background()
 	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
 		if cmdID == protocol.CmdInitialize {
 			return true, writeU32(nil, 5684)
@@ -308,7 +315,6 @@ func TestCopyRatesFromPos(t *testing.T) {
 			var d []byte
 			d = writeU32(d, 2) // count
 
-			// rate 1
 			d = writeI64(d, 1710000000)
 			d = writeF64(d, 1.0850)
 			d = writeF64(d, 1.0860)
@@ -318,7 +324,6 @@ func TestCopyRatesFromPos(t *testing.T) {
 			d = writeU32(d, 5)
 			d = writeI64(d, 0)
 
-			// rate 2
 			d = writeI64(d, 1710003600)
 			d = writeF64(d, 1.0855)
 			d = writeF64(d, 1.0870)
@@ -334,13 +339,13 @@ func TestCopyRatesFromPos(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := gomt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(ctx, mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
 	defer client.Close()
 
-	rates, err := client.CopyRatesFromPos("EURUSD", gomt5.TimeframeH1, 0, 2)
+	rates, err := client.CopyRatesFromPos(ctx, "EURUSD", gomt5.TimeframeH1, 0, 2)
 	if err != nil {
 		t.Fatalf("copy rates: %v", err)
 	}
@@ -356,30 +361,32 @@ func TestCopyRatesFromPos(t *testing.T) {
 }
 
 func TestErrorResponse(t *testing.T) {
+	ctx := context.Background()
 	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
 		if cmdID == protocol.CmdInitialize {
 			return true, writeU32(nil, 5684)
 		}
 		var d []byte
-		d = writeU32(d, uint32(0xFFFFFFFF-12)) // error code -13
+		d = writeU32(d, uint32(0xFFFFFFFF-12))
 		d = writeStr(d, "invalid parameters")
 		return false, d
 	})
 	defer mock.Close()
 
-	client, err := gomt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(ctx, mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
 	defer client.Close()
 
-	_, err = client.SymbolsTotal()
+	_, err = client.SymbolsTotal(ctx)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 }
 
 func TestPositionsTotal(t *testing.T) {
+	ctx := context.Background()
 	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
 		if cmdID == protocol.CmdInitialize {
 			return true, writeU32(nil, 5684)
@@ -391,17 +398,278 @@ func TestPositionsTotal(t *testing.T) {
 	})
 	defer mock.Close()
 
-	client, err := gomt5.NewClientFromConn(mock)
+	client, err := gomt5.NewClientFromConn(ctx, mock)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
 	defer client.Close()
 
-	total, err := client.PositionsTotal()
+	total, err := client.PositionsTotal(ctx)
 	if err != nil {
 		t.Fatalf("positions total: %v", err)
 	}
 	if total != 3 {
 		t.Errorf("expected 3, got %d", total)
+	}
+}
+
+func mockPosition(ticket int64, symbol string) []byte {
+	var d []byte
+	d = writeI64(d, ticket)
+	d = writeI64(d, 1710000000)
+	d = writeI64(d, 1710000000000)
+	d = writeI64(d, 1710000000)
+	d = writeI64(d, 1710000000000)
+	d = writeI64(d, 0)
+	d = writeI64(d, 12345)
+	d = writeI64(d, ticket)
+	d = writeI64(d, 0)
+	d = writeF64(d, 0.1)
+	d = writeF64(d, 1.0850)
+	d = writeF64(d, 1.0860)
+	d = writeF64(d, 1.0800)
+	d = writeF64(d, 1.0900)
+	d = writeF64(d, -0.5)
+	d = writeF64(d, 10.0)
+	d = writeStr(d, symbol)
+	d = writeStr(d, "")
+	d = writeStr(d, "")
+	return d
+}
+
+func TestPositionsGetWithFilter(t *testing.T) {
+	ctx := context.Background()
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		switch cmdID {
+		case protocol.CmdPositionsGet:
+			var d []byte
+			d = writeU32(d, 2)
+			d = append(d, mockPosition(100, "EURUSD")...)
+			d = append(d, mockPosition(200, "USDJPY")...)
+			return true, d
+		case protocol.CmdPositionsGetByTicket:
+			var d []byte
+			d = writeU32(d, 1)
+			d = append(d, mockPosition(100, "EURUSD")...)
+			return true, d
+		case protocol.CmdPositionsGetBySymbol:
+			var d []byte
+			d = writeU32(d, 1)
+			d = append(d, mockPosition(100, "EURUSD")...)
+			return true, d
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	all, err := client.PositionsGet(ctx, nil)
+	if err != nil {
+		t.Fatalf("positions get: %v", err)
+	}
+	if len(all) != 2 {
+		t.Fatalf("expected 2 positions, got %d", len(all))
+	}
+
+	byTicket, err := client.PositionsGet(ctx, &gomt5.PositionFilter{Ticket: 100})
+	if err != nil {
+		t.Fatalf("positions get by ticket: %v", err)
+	}
+	if len(byTicket) != 1 || byTicket[0].Ticket != 100 {
+		t.Errorf("expected 1 position with ticket 100, got %d", len(byTicket))
+	}
+
+	byGroup, err := client.PositionsGet(ctx, &gomt5.PositionFilter{Group: "EUR*"})
+	if err != nil {
+		t.Fatalf("positions get by group: %v", err)
+	}
+	if len(byGroup) != 1 || byGroup[0].Symbol != "EURUSD" {
+		t.Errorf("expected 1 EURUSD position, got %d", len(byGroup))
+	}
+}
+
+func mockOrder(ticket int64, symbol string) []byte {
+	var d []byte
+	d = writeI64(d, ticket)
+	d = writeI64(d, 1710000000)
+	d = writeI64(d, 1710000000000)
+	d = writeI64(d, 0)
+	d = writeI64(d, 0)
+	d = writeI64(d, 0)
+	d = writeI64(d, 2)
+	d = writeI64(d, 0)
+	d = writeI64(d, 0)
+	d = writeI64(d, 0)
+	d = writeI64(d, 12345)
+	d = writeI64(d, 0)
+	d = writeI64(d, 0)
+	d = writeI64(d, 0)
+	d = writeF64(d, 0.1)
+	d = writeF64(d, 0.1)
+	d = writeF64(d, 1.0850)
+	d = writeF64(d, 1.0860)
+	d = writeF64(d, 0)
+	d = writeF64(d, 0)
+	d = writeF64(d, 0)
+	d = writeStr(d, symbol)
+	d = writeStr(d, "")
+	d = writeStr(d, "")
+	return d
+}
+
+func TestOrdersGetWithFilter(t *testing.T) {
+	ctx := context.Background()
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		switch cmdID {
+		case protocol.CmdOrdersGet:
+			var d []byte
+			d = writeU32(d, 2)
+			d = append(d, mockOrder(1001, "EURUSD")...)
+			d = append(d, mockOrder(1002, "GBPUSD")...)
+			return true, d
+		case protocol.CmdOrdersGetByTicket:
+			var d []byte
+			d = writeU32(d, 1)
+			d = append(d, mockOrder(1001, "EURUSD")...)
+			return true, d
+		case protocol.CmdOrdersGetBySymbol:
+			var d []byte
+			d = writeU32(d, 1)
+			d = append(d, mockOrder(1001, "EURUSD")...)
+			return true, d
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	all, err := client.OrdersGet(ctx, nil)
+	if err != nil {
+		t.Fatalf("orders get: %v", err)
+	}
+	if len(all) != 2 {
+		t.Fatalf("expected 2 orders, got %d", len(all))
+	}
+
+	byTicket, err := client.OrdersGet(ctx, &gomt5.OrderFilter{Ticket: 1001})
+	if err != nil {
+		t.Fatalf("orders get by ticket: %v", err)
+	}
+	if len(byTicket) != 1 || byTicket[0].Ticket != 1001 {
+		t.Errorf("expected 1 order with ticket 1001")
+	}
+}
+
+func TestEnumStrings(t *testing.T) {
+	if gomt5.TimeframeH1.String() != "H1" {
+		t.Errorf("expected H1, got %s", gomt5.TimeframeH1.String())
+	}
+	if gomt5.OrderTypeBuy.String() != "Buy" {
+		t.Errorf("expected Buy, got %s", gomt5.OrderTypeBuy.String())
+	}
+	if gomt5.TradeActionDeal.String() != "Deal" {
+		t.Errorf("expected Deal, got %s", gomt5.TradeActionDeal.String())
+	}
+	if gomt5.DealEntryIn.String() != "In" {
+		t.Errorf("expected In, got %s", gomt5.DealEntryIn.String())
+	}
+	if gomt5.PositionTypeSell.String() != "Sell" {
+		t.Errorf("expected Sell, got %s", gomt5.PositionTypeSell.String())
+	}
+}
+
+func TestTradeResultIsOK(t *testing.T) {
+	ok := &gomt5.TradeResult{Retcode: gomt5.RetcodeDone}
+	if !ok.IsOK() {
+		t.Error("expected IsOK true for RetcodeDone")
+	}
+
+	fail := &gomt5.TradeResult{Retcode: gomt5.RetcodeReject}
+	if fail.IsOK() {
+		t.Error("expected IsOK false for RetcodeReject")
+	}
+}
+
+func TestContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		return true, writeU32(nil, 250)
+	})
+	defer mock.Close()
+
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	cancel()
+
+	_, err = client.SymbolsTotal(ctx)
+	if err == nil {
+		t.Fatal("expected error from cancelled context")
+	}
+}
+
+func TestLoggerOption(t *testing.T) {
+	ctx := context.Background()
+	var logged bool
+
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		return true, writeU32(nil, 42)
+	})
+	defer mock.Close()
+
+	var hookCalled bool
+	client, err := gomt5.NewClientFromConn(ctx, mock,
+		gomt5.WithLogger(testLogger{onLog: func() { logged = true }}),
+		gomt5.WithOnRequest(func(cmdID uint32, duration time.Duration, err error) {
+			hookCalled = true
+		}),
+	)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	_, _ = client.SymbolsTotal(ctx)
+	if !logged {
+		t.Error("expected logger to be called")
+	}
+	if !hookCalled {
+		t.Error("expected OnRequest hook to be called")
+	}
+}
+
+type testLogger struct {
+	onLog func()
+}
+
+func (l testLogger) Debug(msg string, args ...any) {
+	if l.onLog != nil {
+		l.onLog()
 	}
 }

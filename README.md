@@ -11,12 +11,13 @@ Native Go client for MetaTrader 5. Communicates directly with the MT5 terminal v
 
 - Direct IPC connection to `terminal64.exe` via Windows Named Pipes
 - Reverse-engineered binary protocol (same as `MetaTrader5.pyd`)
+- `context.Context` support on all methods for cancellation and timeouts
 - Account and terminal information
-- Real-time symbol info and tick data
+- Real-time symbol info, tick data, and market book (depth of market)
 - Historical rates and ticks (OHLCV, copy from position/date/range)
 - Order management (send, check, calc margin/profit)
-- Position and history queries (orders, deals)
-- Streaming tick subscriptions
+- Position and history queries with rich filters (symbol, ticket, group)
+- Pluggable logger and request hooks for observability
 - Zero external dependencies (only `golang.org/x/sys`)
 
 ## Requirements
@@ -37,6 +38,7 @@ go get github.com/mukbeast4/go-mt5
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -44,7 +46,9 @@ import (
 )
 
 func main() {
-	client, err := gomt5.NewClient()
+	ctx := context.Background()
+
+	client, err := gomt5.NewClient(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,14 +56,14 @@ func main() {
 
 	fmt.Printf("Connected to MT5 build %d\n", client.Build())
 
-	account, err := client.AccountInfo()
+	account, err := client.AccountInfo(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("Account: %s Balance: %.2f %s\n",
 		account.Name, account.Balance, account.Currency)
 
-	tick, err := client.SymbolInfoTick("EURUSD")
+	tick, err := client.SymbolInfoTick(ctx, "EURUSD")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,15 +75,48 @@ func main() {
 
 | Group | Methods |
 |-------|---------|
-| Connection | `NewClient()`, `Close()`, `Build()`, `LastError()` |
-| Account | `AccountInfo()`, `TerminalInfo()`, `Version()` |
-| Symbols | `SymbolsTotal()`, `SymbolInfo()`, `SymbolInfoTick()` |
-| Market Data | `CopyRatesFrom()`, `CopyRatesFromPos()`, `CopyRatesRange()`, `CopyTicksFrom()`, `CopyTicksRange()` |
-| Trading | `OrderSend()`, `OrderCheck()`, `OrderCalcMargin()`, `OrderCalcProfit()`, `OrdersTotal()`, `OrdersGet()` |
-| Positions | `PositionsTotal()`, `PositionsGet()` |
-| History | `HistoryOrdersTotal()`, `HistoryOrdersGet()`, `HistoryDealsTotal()`, `HistoryDealsGet()` |
-| Streaming | `SubscribeTicks()`, `UnsubscribeTicks()` |
-| Debug | `SendRaw()` |
+| Connection | `NewClient(ctx)`, `NewClientFromConn(ctx, conn)`, `Close()`, `Build()`, `LastError()` |
+| Account | `AccountInfo(ctx)`, `TerminalInfo(ctx)`, `Version(ctx)` |
+| Symbols | `SymbolsTotal(ctx)`, `SymbolsGet(ctx, group)`, `SymbolInfo(ctx, symbol)`, `SymbolInfoTick(ctx, symbol)`, `SymbolSelect(ctx, symbol, enable)` |
+| Market Data | `CopyRatesFrom(ctx, ...)`, `CopyRatesFromPos(ctx, ...)`, `CopyRatesRange(ctx, ...)`, `CopyTicksFrom(ctx, ...)`, `CopyTicksRange(ctx, ...)` |
+| Market Book | `MarketBookAdd(ctx, symbol)`, `MarketBookGet(ctx, symbol)`, `MarketBookRelease(ctx, symbol)` |
+| Trading | `OrderSend(ctx, req)`, `OrderCheck(ctx, req)`, `OrderCalcMargin(ctx, ...)`, `OrderCalcProfit(ctx, ...)`, `OrdersTotal(ctx)`, `OrdersGet(ctx, *OrderFilter)` |
+| Positions | `PositionsTotal(ctx)`, `PositionsGet(ctx, *PositionFilter)` |
+| History | `HistoryOrdersTotal(ctx, from, to)`, `HistoryOrdersGet(ctx, *HistoryFilter)`, `HistoryDealsTotal(ctx, from, to)`, `HistoryDealsGet(ctx, *HistoryFilter)` |
+| Debug | `SendRaw(ctx, cmdID, params)` |
+
+### Options
+
+```go
+gomt5.NewClient(ctx,
+	gomt5.WithPipeName(`\\.\pipe\MT5.123456`),
+	gomt5.WithTimeout(30*time.Second),
+	gomt5.WithDebug(true),
+	gomt5.WithLogger(myLogger),
+	gomt5.WithOnRequest(func(cmdID uint32, d time.Duration, err error) {
+		// metrics hook
+	}),
+)
+```
+
+### Filters
+
+```go
+positions, _ := client.PositionsGet(ctx, &gomt5.PositionFilter{
+	Symbol: "EURUSD",
+})
+
+positions, _ = client.PositionsGet(ctx, &gomt5.PositionFilter{
+	Ticket: 12345,
+})
+
+positions, _ = client.PositionsGet(ctx, &gomt5.PositionFilter{
+	Group: "EUR*",
+})
+
+// nil filter returns all
+positions, _ = client.PositionsGet(ctx, nil)
+```
 
 ## Protocol
 
@@ -92,6 +129,91 @@ Response: [payload_len:LE32][cmd_echo:LE32][success:LE32][data...]
 - Floats: IEEE 754 double LE64
 - Strings: `[char_count:LE32][UTF-16LE data]`
 - Booleans: LE64 (0/1)
+
+## Python API Compatibility
+
+| Python function | go-mt5 equivalent | Status |
+|----------------|-------------------|--------|
+| `initialize()` | `NewClient(ctx)` | Done |
+| `shutdown()` | `Close()` | Done |
+| `login()` | `Login(ctx, login, password, server)` | Done |
+| `version()` | `Version(ctx)` | Done |
+| `account_info()` | `AccountInfo(ctx)` | Done |
+| `terminal_info()` | `TerminalInfo(ctx)` | Done |
+| `symbols_total()` | `SymbolsTotal(ctx)` | Done |
+| `symbols_get()` | `SymbolsGet(ctx, group)` | Done |
+| `symbol_info()` | `SymbolInfo(ctx, symbol)` | Done |
+| `symbol_info_tick()` | `SymbolInfoTick(ctx, symbol)` | Done |
+| `symbol_select()` | `SymbolSelect(ctx, symbol, enable)` | Done |
+| `market_book_add()` | `MarketBookAdd(ctx, symbol)` | Done |
+| `market_book_get()` | `MarketBookGet(ctx, symbol)` | Done |
+| `market_book_release()` | `MarketBookRelease(ctx, symbol)` | Done |
+| `copy_rates_from()` | `CopyRatesFrom(ctx, ...)` | Done |
+| `copy_rates_from_pos()` | `CopyRatesFromPos(ctx, ...)` | Done |
+| `copy_rates_range()` | `CopyRatesRange(ctx, ...)` | Done |
+| `copy_ticks_from()` | `CopyTicksFrom(ctx, ...)` | Done |
+| `copy_ticks_range()` | `CopyTicksRange(ctx, ...)` | Done |
+| `orders_total()` | `OrdersTotal(ctx)` | Done |
+| `orders_get()` | `OrdersGet(ctx, *OrderFilter)` | Done |
+| `positions_total()` | `PositionsTotal(ctx)` | Done |
+| `positions_get()` | `PositionsGet(ctx, *PositionFilter)` | Done |
+| `history_orders_total()` | `HistoryOrdersTotal(ctx, from, to)` | Done |
+| `history_orders_get()` | `HistoryOrdersGet(ctx, *HistoryFilter)` | Done |
+| `history_deals_total()` | `HistoryDealsTotal(ctx, from, to)` | Done |
+| `history_deals_get()` | `HistoryDealsGet(ctx, *HistoryFilter)` | Done |
+| `order_send()` | `OrderSend(ctx, req)` | Done |
+| `order_check()` | `OrderCheck(ctx, req)` | Done |
+| `order_calc_margin()` | `OrderCalcMargin(ctx, ...)` | Done |
+| `order_calc_profit()` | `OrderCalcProfit(ctx, ...)` | Done |
+| `last_error()` | `LastError()` | Done |
+
+### go-mt5 extras (not in Python API)
+
+| Feature | Method |
+|---------|--------|
+| Request hooks | `WithOnRequest(hook)` |
+| Debug logging | `WithDebug(true)`, `WithLogger(l)` |
+| Tick streaming (polling) | `SubscribeTicks(ctx, symbol)` |
+| Trade helpers | `tradeutil.Buy()`, `Sell()`, `ClosePosition()`, etc. |
+| Data analysis | `analysis.NewRateSeries()`, `SMA()`, `EMA()` |
+| CSV export | `analysis.ToCSV(writer, rates)` |
+| Time helpers | `ToTime()`, `FromTime()`, `.TimeUTC()` methods |
+| Request validation | `TradeRequest.Validate()` |
+| Auto-reconnect | `WithAutoReconnect(true)` |
+
+## Upgrading from v0.1.0
+
+All public methods now require `context.Context` as the first parameter:
+
+```go
+// Before (v0.1.0)
+client, _ := gomt5.NewClient()
+info, _ := client.AccountInfo()
+positions, _ := client.PositionsGet("EURUSD")
+
+// After (v0.1.1+)
+ctx := context.Background()
+client, _ := gomt5.NewClient(ctx)
+info, _ := client.AccountInfo(ctx)
+positions, _ := client.PositionsGet(ctx, &gomt5.PositionFilter{Symbol: "EURUSD"})
+```
+
+Other breaking changes:
+- `NewClientFromConn(conn)` -> `NewClientFromConn(ctx, conn, opts...)`
+- `OrdersGet(symbol)` -> `OrdersGet(ctx, *OrderFilter)`
+- `PositionsGet(symbol)` -> `PositionsGet(ctx, *PositionFilter)`
+- `HistoryOrdersGet(from, to)` -> `HistoryOrdersGet(ctx, *HistoryFilter)`
+- `HistoryDealsGet(from, to)` -> `HistoryDealsGet(ctx, *HistoryFilter)`
+- `SendRaw(cmdID, params)` -> `SendRaw(ctx, cmdID, params)`
+
+## Limitations
+
+- **Windows only**: Named pipes are a Windows kernel feature. The library cannot connect to MT5 from Linux or macOS (cross-compilation works, but runtime requires Windows).
+- **Reverse-engineered protocol**: The binary protocol is not documented by MetaQuotes. Command IDs and payload formats were discovered by analyzing the official Python `MetaTrader5.pyd` library. Some commands (e.g., `Login`) are not yet mapped because their IDs have not been identified in the pipe protocol.
+- **MT5 build compatibility**: MetaQuotes may change the pipe protocol between MT5 builds without notice. If something breaks after an MT5 update, please open an issue with your build number.
+- **Broker differences**: Different brokers configure their MT5 servers differently. Filling modes, symbol visibility, available order types, and margin calculation methods vary. Always check `SymbolInfo` before trading.
+- **Single terminal**: The library connects to one MT5 terminal instance. If multiple terminals are running, use `WithPipeName` to target a specific one.
+- **No tick streaming yet**: Real-time tick push from the pipe protocol has not been reverse-engineered. Use polling via `SymbolInfoTick` or `CopyTicksFrom` as a workaround.
 
 ## Testing
 
@@ -109,7 +231,7 @@ go-mt5/
 ├── internal/
 │   ├── protocol/            # Binary codec + message framing
 │   └── pipe/                # Windows named pipe transport
-└── mql5/                    # EA bridge (alternative approach)
+└── .github/                 # CI workflows
 ```
 
 ## Contributing

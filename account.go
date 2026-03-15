@@ -1,13 +1,24 @@
 package gomt5
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
 )
 
-func (c *Client) AccountInfo() (*AccountInfo, error) {
-	resp, err := c.send(protocol.CmdAccountInfo, nil)
+func (c *Client) Login(ctx context.Context, login int64, password, server string) error {
+	w := protocol.NewWriter()
+	w.WriteI64(login)
+	w.WriteString(password)
+	w.WriteString(server)
+
+	_, err := c.SendRaw(ctx, protocol.CmdLogin, w.Bytes())
+	return err
+}
+
+func (c *Client) AccountInfo(ctx context.Context) (*AccountInfo, error) {
+	resp, err := c.send(ctx, protocol.CmdAccountInfo, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +63,8 @@ func (c *Client) AccountInfo() (*AccountInfo, error) {
 	return info, nil
 }
 
-func (c *Client) TerminalInfo() (*TerminalInfo, error) {
-	resp, err := c.send(protocol.CmdTerminalInfoFull, nil)
+func (c *Client) TerminalInfo(ctx context.Context) (*TerminalInfo, error) {
+	resp, err := c.send(ctx, protocol.CmdTerminalInfoFull, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +103,8 @@ func (c *Client) TerminalInfo() (*TerminalInfo, error) {
 	return info, nil
 }
 
-func (c *Client) Version() (*VersionInfo, error) {
-	resp, err := c.send(protocol.CmdTerminalInfo, nil)
+func (c *Client) Version(ctx context.Context) (*VersionInfo, error) {
+	resp, err := c.send(ctx, protocol.CmdTerminalInfo, nil)
 	if err != nil {
 		return nil, err
 	}

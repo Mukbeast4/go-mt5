@@ -1,17 +1,18 @@
 package gomt5
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
 )
 
-func (c *Client) HistoryOrdersTotal(dateFrom, dateTo int64) (int, error) {
+func (c *Client) HistoryOrdersTotal(ctx context.Context, dateFrom, dateTo int64) (int, error) {
 	w := protocol.NewWriter()
 	w.WriteI64(dateFrom)
 	w.WriteI64(dateTo)
 
-	resp, err := c.send(protocol.CmdHistoryOrdersTotal, w.Bytes())
+	resp, err := c.send(ctx, protocol.CmdHistoryOrdersTotal, w.Bytes())
 	if err != nil {
 		return 0, err
 	}
@@ -23,25 +24,52 @@ func (c *Client) HistoryOrdersTotal(dateFrom, dateTo int64) (int, error) {
 	return int(total), nil
 }
 
-func (c *Client) HistoryOrdersGet(dateFrom, dateTo int64) ([]Order, error) {
+func (c *Client) HistoryOrdersGet(ctx context.Context, filter *HistoryFilter) ([]Order, error) {
+	var cmdID uint32
 	w := protocol.NewWriter()
-	w.WriteI64(dateFrom)
-	w.WriteI64(dateTo)
 
-	data, err := c.SendRaw(141, w.Bytes())
+	switch {
+	case filter == nil:
+		cmdID = protocol.CmdHistoryOrdersGet
+		w.WriteI64(0)
+		w.WriteI64(0)
+	case filter.Ticket != 0:
+		cmdID = protocol.CmdHistoryOrdersGetTkt
+		w.WriteI64(filter.Ticket)
+	case filter.Symbol != "":
+		cmdID = protocol.CmdHistoryOrdersGetSym
+		w.WriteI64(filter.DateFrom)
+		w.WriteI64(filter.DateTo)
+		w.WriteString(filter.Symbol)
+	default:
+		cmdID = protocol.CmdHistoryOrdersGet
+		w.WriteI64(filter.DateFrom)
+		w.WriteI64(filter.DateTo)
+	}
+
+	data, err := c.SendRaw(ctx, cmdID, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
 
-	return decodeOrders(data)
+	orders, err := decodeOrders(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if filter != nil && filter.Group != "" {
+		orders = filterByGroup(orders, filter.Group, func(o Order) string { return o.Symbol })
+	}
+
+	return orders, nil
 }
 
-func (c *Client) HistoryDealsTotal(dateFrom, dateTo int64) (int, error) {
+func (c *Client) HistoryDealsTotal(ctx context.Context, dateFrom, dateTo int64) (int, error) {
 	w := protocol.NewWriter()
 	w.WriteI64(dateFrom)
 	w.WriteI64(dateTo)
 
-	resp, err := c.send(protocol.CmdHistoryDealsTotal, w.Bytes())
+	resp, err := c.send(ctx, protocol.CmdHistoryDealsTotal, w.Bytes())
 	if err != nil {
 		return 0, err
 	}
@@ -53,17 +81,44 @@ func (c *Client) HistoryDealsTotal(dateFrom, dateTo int64) (int, error) {
 	return int(total), nil
 }
 
-func (c *Client) HistoryDealsGet(dateFrom, dateTo int64) ([]Deal, error) {
+func (c *Client) HistoryDealsGet(ctx context.Context, filter *HistoryFilter) ([]Deal, error) {
+	var cmdID uint32
 	w := protocol.NewWriter()
-	w.WriteI64(dateFrom)
-	w.WriteI64(dateTo)
 
-	data, err := c.SendRaw(151, w.Bytes())
+	switch {
+	case filter == nil:
+		cmdID = protocol.CmdHistoryDealsGet
+		w.WriteI64(0)
+		w.WriteI64(0)
+	case filter.Ticket != 0:
+		cmdID = protocol.CmdHistoryDealsGetTkt
+		w.WriteI64(filter.Ticket)
+	case filter.Symbol != "":
+		cmdID = protocol.CmdHistoryDealsGetSym
+		w.WriteI64(filter.DateFrom)
+		w.WriteI64(filter.DateTo)
+		w.WriteString(filter.Symbol)
+	default:
+		cmdID = protocol.CmdHistoryDealsGet
+		w.WriteI64(filter.DateFrom)
+		w.WriteI64(filter.DateTo)
+	}
+
+	data, err := c.SendRaw(ctx, cmdID, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
 
-	return decodeDeals(data)
+	deals, err := decodeDeals(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if filter != nil && filter.Group != "" {
+		deals = filterByGroup(deals, filter.Group, func(d Deal) string { return d.Symbol })
+	}
+
+	return deals, nil
 }
 
 func decodeDeals(data []byte) ([]Deal, error) {

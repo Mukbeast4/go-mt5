@@ -1,13 +1,14 @@
 package gomt5
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
 )
 
-func (c *Client) PositionsTotal() (int, error) {
-	resp, err := c.send(protocol.CmdPositionsTotal, nil)
+func (c *Client) PositionsTotal(ctx context.Context) (int, error) {
+	resp, err := c.send(ctx, protocol.CmdPositionsTotal, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -19,16 +20,38 @@ func (c *Client) PositionsTotal() (int, error) {
 	return int(total), nil
 }
 
-func (c *Client) PositionsGet(symbol string) ([]Position, error) {
+func (c *Client) PositionsGet(ctx context.Context, filter *PositionFilter) ([]Position, error) {
+	var cmdID uint32
 	w := protocol.NewWriter()
-	w.WriteString(symbol)
 
-	data, err := c.SendRaw(121, w.Bytes())
+	switch {
+	case filter == nil:
+		cmdID = protocol.CmdPositionsGet
+	case filter.Ticket != 0:
+		cmdID = protocol.CmdPositionsGetByTicket
+		w.WriteI64(filter.Ticket)
+	case filter.Symbol != "":
+		cmdID = protocol.CmdPositionsGetBySymbol
+		w.WriteString(filter.Symbol)
+	default:
+		cmdID = protocol.CmdPositionsGet
+	}
+
+	data, err := c.SendRaw(ctx, cmdID, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
 
-	return decodePositions(data)
+	positions, err := decodePositions(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if filter != nil && filter.Group != "" {
+		positions = filterByGroup(positions, filter.Group, func(p Position) string { return p.Symbol })
+	}
+
+	return positions, nil
 }
 
 func decodePositions(data []byte) ([]Position, error) {

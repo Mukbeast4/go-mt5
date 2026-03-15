@@ -1,12 +1,13 @@
 package gomt5
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
 )
 
-func (c *Client) OrderSend(request TradeRequest) (*TradeResult, error) {
+func (c *Client) OrderSend(ctx context.Context, request TradeRequest) (*TradeResult, error) {
 	w := protocol.NewWriter()
 	w.WriteU32(uint32(request.Action))
 	w.WriteI64(request.Magic)
@@ -26,7 +27,7 @@ func (c *Client) OrderSend(request TradeRequest) (*TradeResult, error) {
 	w.WriteI64(request.Position)
 	w.WriteI64(request.PositionBy)
 
-	data, err := c.SendRaw(200, w.Bytes())
+	data, err := c.SendRaw(ctx, protocol.CmdOrderSend, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +51,7 @@ func (c *Client) OrderSend(request TradeRequest) (*TradeResult, error) {
 	return result, nil
 }
 
-func (c *Client) OrderCheck(request TradeRequest) (*CheckResult, error) {
+func (c *Client) OrderCheck(ctx context.Context, request TradeRequest) (*CheckResult, error) {
 	w := protocol.NewWriter()
 	w.WriteU32(uint32(request.Action))
 	w.WriteString(request.Symbol)
@@ -62,7 +63,7 @@ func (c *Client) OrderCheck(request TradeRequest) (*CheckResult, error) {
 	w.WriteU32(uint32(request.Type))
 	w.WriteU32(uint32(request.TypeFilling))
 
-	data, err := c.SendRaw(201, w.Bytes())
+	data, err := c.SendRaw(ctx, protocol.CmdOrderCheck, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -84,14 +85,14 @@ func (c *Client) OrderCheck(request TradeRequest) (*CheckResult, error) {
 	return result, nil
 }
 
-func (c *Client) OrderCalcMargin(action TradeAction, symbol string, volume, price float64) (float64, error) {
+func (c *Client) OrderCalcMargin(ctx context.Context, action TradeAction, symbol string, volume, price float64) (float64, error) {
 	w := protocol.NewWriter()
 	w.WriteU32(uint32(action))
 	w.WriteString(symbol)
 	w.WriteF64(volume)
 	w.WriteF64(price)
 
-	data, err := c.SendRaw(202, w.Bytes())
+	data, err := c.SendRaw(ctx, protocol.CmdOrderCalcMargin, w.Bytes())
 	if err != nil {
 		return 0, err
 	}
@@ -104,7 +105,7 @@ func (c *Client) OrderCalcMargin(action TradeAction, symbol string, volume, pric
 	return margin, nil
 }
 
-func (c *Client) OrderCalcProfit(action TradeAction, symbol string, volume, priceOpen, priceClose float64) (float64, error) {
+func (c *Client) OrderCalcProfit(ctx context.Context, action TradeAction, symbol string, volume, priceOpen, priceClose float64) (float64, error) {
 	w := protocol.NewWriter()
 	w.WriteU32(uint32(action))
 	w.WriteString(symbol)
@@ -112,7 +113,7 @@ func (c *Client) OrderCalcProfit(action TradeAction, symbol string, volume, pric
 	w.WriteF64(priceOpen)
 	w.WriteF64(priceClose)
 
-	data, err := c.SendRaw(203, w.Bytes())
+	data, err := c.SendRaw(ctx, protocol.CmdOrderCalcProfit, w.Bytes())
 	if err != nil {
 		return 0, err
 	}
@@ -125,8 +126,8 @@ func (c *Client) OrderCalcProfit(action TradeAction, symbol string, volume, pric
 	return profit, nil
 }
 
-func (c *Client) OrdersTotal() (int, error) {
-	resp, err := c.send(protocol.CmdOrdersTotal, nil)
+func (c *Client) OrdersTotal(ctx context.Context) (int, error) {
+	resp, err := c.send(ctx, protocol.CmdOrdersTotal, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -138,16 +139,38 @@ func (c *Client) OrdersTotal() (int, error) {
 	return int(total), nil
 }
 
-func (c *Client) OrdersGet(symbol string) ([]Order, error) {
+func (c *Client) OrdersGet(ctx context.Context, filter *OrderFilter) ([]Order, error) {
+	var cmdID uint32
 	w := protocol.NewWriter()
-	w.WriteString(symbol)
 
-	data, err := c.SendRaw(131, w.Bytes())
+	switch {
+	case filter == nil:
+		cmdID = protocol.CmdOrdersGet
+	case filter.Ticket != 0:
+		cmdID = protocol.CmdOrdersGetByTicket
+		w.WriteI64(filter.Ticket)
+	case filter.Symbol != "":
+		cmdID = protocol.CmdOrdersGetBySymbol
+		w.WriteString(filter.Symbol)
+	default:
+		cmdID = protocol.CmdOrdersGet
+	}
+
+	data, err := c.SendRaw(ctx, cmdID, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
 
-	return decodeOrders(data)
+	orders, err := decodeOrders(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if filter != nil && filter.Group != "" {
+		orders = filterByGroup(orders, filter.Group, func(o Order) string { return o.Symbol })
+	}
+
+	return orders, nil
 }
 
 func decodeOrders(data []byte) ([]Order, error) {

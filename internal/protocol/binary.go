@@ -12,13 +12,11 @@ type Writer struct {
 }
 
 func NewWriter() *Writer {
-	return &Writer{}
+	return &Writer{buf: make([]byte, 0, 128)}
 }
 
 func (w *Writer) WriteU32(v uint32) {
-	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, v)
-	w.buf = append(w.buf, b...)
+	w.buf = binary.LittleEndian.AppendUint32(w.buf, v)
 }
 
 func (w *Writer) WriteI32(v int32) {
@@ -26,9 +24,7 @@ func (w *Writer) WriteI32(v int32) {
 }
 
 func (w *Writer) WriteU64(v uint64) {
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, v)
-	w.buf = append(w.buf, b...)
+	w.buf = binary.LittleEndian.AppendUint64(w.buf, v)
 }
 
 func (w *Writer) WriteI64(v int64) {
@@ -41,11 +37,9 @@ func (w *Writer) WriteF64(v float64) {
 
 func (w *Writer) WriteString(s string) {
 	runes := utf16.Encode([]rune(s))
-	w.WriteU32(uint32(len(runes)))
+	w.buf = binary.LittleEndian.AppendUint32(w.buf, uint32(len(runes)))
 	for _, r := range runes {
-		b := make([]byte, 2)
-		binary.LittleEndian.PutUint16(b, r)
-		w.buf = append(w.buf, b...)
+		w.buf = binary.LittleEndian.AppendUint16(w.buf, r)
 	}
 }
 

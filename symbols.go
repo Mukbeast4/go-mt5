@@ -1,13 +1,14 @@
 package gomt5
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
 )
 
-func (c *Client) SymbolsTotal() (int, error) {
-	resp, err := c.send(protocol.CmdSymbolsTotal, nil)
+func (c *Client) SymbolsTotal(ctx context.Context) (int, error) {
+	resp, err := c.send(ctx, protocol.CmdSymbolsTotal, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -19,11 +20,39 @@ func (c *Client) SymbolsTotal() (int, error) {
 	return int(total), nil
 }
 
-func (c *Client) SymbolInfo(symbol string) (*SymbolInfo, error) {
+func (c *Client) SymbolsGet(ctx context.Context, group string) ([]SymbolInfo, error) {
+	cmdID := protocol.CmdSymbolsGet
+	w := protocol.NewWriter()
+
+	if group != "" {
+		cmdID = protocol.CmdSymbolsGetByGroup
+		w.WriteString(group)
+	}
+
+	data, err := c.SendRaw(ctx, cmdID, w.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	r := protocol.NewReader(data)
+	count := int(r.ReadU32())
+
+	symbols := make([]SymbolInfo, 0, count)
+	for i := 0; i < count; i++ {
+		sym := decodeSymbolInfo(r)
+		if r.Err() != nil {
+			return nil, fmt.Errorf("decode symbol %d: %w", i, r.Err())
+		}
+		symbols = append(symbols, *sym)
+	}
+	return symbols, nil
+}
+
+func (c *Client) SymbolInfo(ctx context.Context, symbol string) (*SymbolInfo, error) {
 	w := protocol.NewWriter()
 	w.WriteString(symbol)
 
-	resp, err := c.send(protocol.CmdSymbolInfo, w.Bytes())
+	resp, err := c.send(ctx, protocol.CmdSymbolInfo, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -36,11 +65,11 @@ func (c *Client) SymbolInfo(symbol string) (*SymbolInfo, error) {
 	return info, nil
 }
 
-func (c *Client) SymbolInfoTick(symbol string) (*Tick, error) {
+func (c *Client) SymbolInfoTick(ctx context.Context, symbol string) (*Tick, error) {
 	w := protocol.NewWriter()
 	w.WriteString(symbol)
 
-	resp, err := c.send(protocol.CmdSymbolInfoTick, w.Bytes())
+	resp, err := c.send(ctx, protocol.CmdSymbolInfoTick, w.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -51,6 +80,19 @@ func (c *Client) SymbolInfoTick(symbol string) (*Tick, error) {
 		return nil, fmt.Errorf("decode tick: %w", r.Err())
 	}
 	return tick, nil
+}
+
+func (c *Client) SymbolSelect(ctx context.Context, symbol string, enable bool) error {
+	w := protocol.NewWriter()
+	w.WriteString(symbol)
+	if enable {
+		w.WriteI64(1)
+	} else {
+		w.WriteI64(0)
+	}
+
+	_, err := c.SendRaw(ctx, protocol.CmdSymbolSelect, w.Bytes())
+	return err
 }
 
 func decodeSymbolInfo(r *protocol.Reader) *SymbolInfo {
