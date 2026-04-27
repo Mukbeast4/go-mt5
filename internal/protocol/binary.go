@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"math"
 	"unicode/utf16"
@@ -99,8 +100,59 @@ func (r *Reader) ReadF64() float64 {
 	return math.Float64frombits(r.ReadU64())
 }
 
+// ReadBool reads an LE64 boolean (used in most response payloads).
 func (r *Reader) ReadBool() bool {
 	return r.ReadI64() != 0
+}
+
+// ReadBool1 reads a 1-byte boolean. Used by struct-style payloads such as
+// the SymbolInfo response (cmd 170 / 174), where booleans are packed as a
+// single byte rather than LE64.
+func (r *Reader) ReadBool1() bool {
+	if r.err != nil {
+		return false
+	}
+	if r.pos+1 > len(r.data) {
+		r.err = io.ErrUnexpectedEOF
+		return false
+	}
+	v := r.data[r.pos] != 0
+	r.pos++
+	return v
+}
+
+// ReadFixedString reads a fixed-width null-padded UTF-16LE string slot. The
+// content starts at the first byte and is terminated by a UTF-16 NUL pair or
+// the end of the slot, whichever comes first. The cursor always advances by
+// exactly slotBytes regardless of the string length.
+//
+// Used by struct-style responses (e.g. SymbolInfo) where each string field
+// occupies a fixed buffer matching the MT5 internal struct layout.
+func (r *Reader) ReadFixedString(slotBytes int) string {
+	if r.err != nil {
+		return ""
+	}
+	if slotBytes%2 != 0 {
+		r.err = fmt.Errorf("ReadFixedString: odd slot size %d", slotBytes)
+		return ""
+	}
+	if r.pos+slotBytes > len(r.data) {
+		r.err = io.ErrUnexpectedEOF
+		return ""
+	}
+	end := r.pos + slotBytes
+	buf := r.data[r.pos:end]
+
+	u16 := make([]uint16, 0, slotBytes/2)
+	for i := 0; i+1 < len(buf); i += 2 {
+		c := binary.LittleEndian.Uint16(buf[i:])
+		if c == 0 {
+			break
+		}
+		u16 = append(u16, c)
+	}
+	r.pos = end
+	return string(utf16.Decode(u16))
 }
 
 func (r *Reader) ReadString() string {
