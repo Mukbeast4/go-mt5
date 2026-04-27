@@ -82,25 +82,74 @@ func (c *Client) SymbolInfoTick(ctx context.Context, symbol string) (*Tick, erro
 	return tick, nil
 }
 
+// SymbolSelect adds (enable=true) or removes (enable=false) a symbol from
+// Market Watch. Mirrors MetaTrader5.symbol_select(symbol, enable).
+//
+// Wire format (cmd 171): [string symbol][int32 enable].
+// The enable flag is LE32 here, even though boolean *response* fields elsewhere
+// in the protocol are LE64 — confirmed via static analysis of _core.pyd.
 func (c *Client) SymbolSelect(ctx context.Context, symbol string, enable bool) error {
 	w := protocol.NewWriter()
 	w.WriteString(symbol)
 	if enable {
-		w.WriteI64(1)
+		w.WriteU32(1)
 	} else {
-		w.WriteI64(0)
+		w.WriteU32(0)
 	}
 
 	_, err := c.SendRaw(ctx, protocol.CmdSymbolSelect, w.Bytes())
 	return err
 }
 
+// Wire layout for SymbolInfo records (cmd 170 single, cmd 174 array entries).
+//
+// Validated against a captured EURUSD response from MT5 build 5684 (the test
+// fixture at testdata/symbol_info_eurusd.bin replays exactly that capture).
+// Total record size = 2993 bytes:
+//   - 145 bytes int/bool (mixed widths: bool=1, u32=4, u64=8)
+//   - 416 bytes float64 (52 fields)
+//   - 2432 bytes strings (13 fixed-width null-padded UTF-16LE slots)
+//
+// All 96 fields decode exactly as MetaTrader5 Python presents them.
+//
+// IMPORTANT: the string field order on the wire is NOT the same as the
+// MetaTrader5 Python namedtuple iteration order. SymbolName is the LAST slot
+// on the wire, even though it sits at index 93 in the namedtuple (between
+// ISIN and Page). Wire order is below.
+const (
+	slotBasis          = 64
+	slotCategory       = 128
+	slotCurrencyBase   = 32
+	slotCurrencyProfit = 32
+	slotCurrencyMargin = 32
+	slotBank           = 512
+	slotDescription    = 64
+	slotExchange       = 64
+	slotFormula        = 1024
+	slotISIN           = 32
+	slotPage           = 128
+	slotPath           = 256
+	slotSymbolName     = 64
+
+	symbolInfoStringRegionBytes = slotBasis + slotCategory + slotCurrencyBase +
+		slotCurrencyProfit + slotCurrencyMargin + slotBank + slotDescription +
+		slotExchange + slotFormula + slotISIN + slotPage + slotPath + slotSymbolName
+)
+
+// Compile-time assertion that the string region matches the captured size.
+// If a future MT5 build changes any slot width, one of these becomes a
+// negative uint constant and the package fails to build.
+const (
+	_ uint = symbolInfoStringRegionBytes - 2432
+	_ uint = 2432 - symbolInfoStringRegionBytes
+)
+
 func decodeSymbolInfo(r *protocol.Reader) *SymbolInfo {
-	return &SymbolInfo{
-		Custom:             r.ReadBool(),
-		ChartMode:          r.ReadI64(),
-		Select:             r.ReadBool(),
-		Visible:            r.ReadBool(),
+	info := &SymbolInfo{
+		Custom:             r.ReadBool1(),
+		ChartMode:          int64(r.ReadU32()),
+		Select:             r.ReadBool1(),
+		Visible:            r.ReadBool1(),
 		SessionDeals:       r.ReadI64(),
 		SessionBuyOrders:   r.ReadI64(),
 		SessionSellOrders:  r.ReadI64(),
@@ -108,26 +157,26 @@ func decodeSymbolInfo(r *protocol.Reader) *SymbolInfo {
 		VolumeHigh:         r.ReadI64(),
 		VolumeLow:          r.ReadI64(),
 		Time:               r.ReadI64(),
-		Digits:             r.ReadI64(),
-		Spread:             r.ReadI64(),
-		SpreadFloat:        r.ReadBool(),
-		TicksBookDepth:     r.ReadI64(),
-		TradeCalcMode:      r.ReadI64(),
-		TradeMode:          r.ReadI64(),
+		Digits:             int64(r.ReadU32()),
+		Spread:             int64(r.ReadU32()),
+		SpreadFloat:        r.ReadBool1(),
+		TicksBookDepth:     int64(r.ReadU32()),
+		TradeCalcMode:      int64(r.ReadU32()),
+		TradeMode:          int64(r.ReadU32()),
 		StartTime:          r.ReadI64(),
 		ExpirationTime:     r.ReadI64(),
-		TradeStopsLevel:    r.ReadI64(),
-		TradeFreezeLevel:   r.ReadI64(),
-		TradeExeMode:       r.ReadI64(),
-		SwapMode:           r.ReadI64(),
-		SwapRollover3Days:  r.ReadI64(),
-		MarginHedgedUseLeg: r.ReadBool(),
-		ExpirationMode:     r.ReadI64(),
-		FillingMode:        r.ReadI64(),
-		OrderMode:          r.ReadI64(),
-		OrderGTCMode:       r.ReadI64(),
-		OptionMode:         r.ReadI64(),
-		OptionRight:        r.ReadI64(),
+		TradeStopsLevel:    int64(r.ReadU32()),
+		TradeFreezeLevel:   int64(r.ReadU32()),
+		TradeExeMode:       int64(r.ReadU32()),
+		SwapMode:           int64(r.ReadU32()),
+		SwapRollover3Days:  int64(r.ReadU32()),
+		MarginHedgedUseLeg: r.ReadBool1(),
+		ExpirationMode:     int64(r.ReadU32()),
+		FillingMode:        int64(r.ReadU32()),
+		OrderMode:          int64(r.ReadU32()),
+		OrderGTCMode:       int64(r.ReadU32()),
+		OptionMode:         int64(r.ReadU32()),
+		OptionRight:        int64(r.ReadU32()),
 
 		Bid:                     r.ReadF64(),
 		BidHigh:                 r.ReadF64(),
@@ -181,21 +230,23 @@ func decodeSymbolInfo(r *protocol.Reader) *SymbolInfo {
 		PriceGreeksRho:          r.ReadF64(),
 		PriceGreeksOmega:        r.ReadF64(),
 		PriceSensitivity:        r.ReadF64(),
-
-		Basis:          r.ReadString(),
-		Category:       r.ReadString(),
-		CurrencyBase:   r.ReadString(),
-		CurrencyProfit: r.ReadString(),
-		CurrencyMargin: r.ReadString(),
-		Bank:           r.ReadString(),
-		Description:    r.ReadString(),
-		Exchange:       r.ReadString(),
-		Formula:        r.ReadString(),
-		ISIN:           r.ReadString(),
-		SymbolName:     r.ReadString(),
-		Page:           r.ReadString(),
-		Path:           r.ReadString(),
 	}
+
+	info.Basis = r.ReadFixedString(slotBasis)
+	info.Category = r.ReadFixedString(slotCategory)
+	info.CurrencyBase = r.ReadFixedString(slotCurrencyBase)
+	info.CurrencyProfit = r.ReadFixedString(slotCurrencyProfit)
+	info.CurrencyMargin = r.ReadFixedString(slotCurrencyMargin)
+	info.Bank = r.ReadFixedString(slotBank)
+	info.Description = r.ReadFixedString(slotDescription)
+	info.Exchange = r.ReadFixedString(slotExchange)
+	info.Formula = r.ReadFixedString(slotFormula)
+	info.ISIN = r.ReadFixedString(slotISIN)
+	info.Page = r.ReadFixedString(slotPage)
+	info.Path = r.ReadFixedString(slotPath)
+	info.SymbolName = r.ReadFixedString(slotSymbolName)
+
+	return info
 }
 
 func decodeTick(r *protocol.Reader) *Tick {

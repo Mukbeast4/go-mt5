@@ -19,3 +19,4 @@ mt5_procmon_analysis/
 mt5_frida_capture/
 *.pyd
 *.bin
+!testdata/*.bin
