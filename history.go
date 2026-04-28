@@ -143,9 +143,9 @@ func decodeDeals(data []byte) ([]Deal, error) {
 			Swap:       r.ReadF64(),
 			Profit:     r.ReadF64(),
 			Fee:        r.ReadF64(),
-			Symbol:     r.ReadString(),
-			Comment:    r.ReadString(),
-			ExternalID: r.ReadString(),
+			Symbol:     r.ReadFixedString(64),
+			Comment:    r.ReadFixedString(64),
+			ExternalID: r.ReadFixedString(64),
 		}
 		if r.Err() != nil {
 			return nil, fmt.Errorf("decode deal %d: %w", i, r.Err())
