@@ -420,10 +420,10 @@ func mockPosition(ticket int64, symbol string) []byte {
 	d = writeI64(d, 1710000000000)
 	d = writeI64(d, 1710000000)
 	d = writeI64(d, 1710000000000)
-	d = writeI64(d, 0)
+	d = writeU32(d, 0)
 	d = writeI64(d, 12345)
 	d = writeI64(d, ticket)
-	d = writeI64(d, 0)
+	d = writeU32(d, 0)
 	d = writeF64(d, 0.1)
 	d = writeF64(d, 1.0850)
 	d = writeF64(d, 1.0860)
@@ -504,14 +504,14 @@ func mockOrder(ticket int64, symbol string) []byte {
 	d = writeI64(d, 0)
 	d = writeI64(d, 0)
 	d = writeI64(d, 0)
-	d = writeI64(d, 2)
-	d = writeI64(d, 0)
-	d = writeI64(d, 0)
-	d = writeI64(d, 0)
+	d = writeU32(d, 2)
+	d = writeU32(d, 0)
+	d = writeU32(d, 0)
+	d = writeU32(d, 0)
 	d = writeI64(d, 12345)
 	d = writeI64(d, 0)
 	d = writeI64(d, 0)
-	d = writeI64(d, 0)
+	d = writeU32(d, 0)
 	d = writeF64(d, 0.1)
 	d = writeF64(d, 0.1)
 	d = writeF64(d, 1.0850)
@@ -573,6 +573,83 @@ func TestOrdersGetWithFilter(t *testing.T) {
 	}
 	if len(byTicket) != 1 || byTicket[0].Ticket != 1001 {
 		t.Errorf("expected 1 order with ticket 1001")
+	}
+}
+
+func mockDeal(ticket int64, symbol string, dealType, entry, reason uint32) []byte {
+	var d []byte
+	d = writeI64(d, ticket)
+	d = writeI64(d, ticket+1)
+	d = writeI64(d, 1710000000)
+	d = writeI64(d, 1710000000123)
+	d = writeU32(d, dealType)
+	d = writeU32(d, entry)
+	d = writeI64(d, 99)
+	d = writeI64(d, ticket)
+	d = writeU32(d, reason)
+	d = writeF64(d, 0.1)
+	d = writeF64(d, 1.0850)
+	d = writeF64(d, -0.5)
+	d = writeF64(d, 0)
+	d = writeF64(d, 12.34)
+	d = writeF64(d, 0)
+	d = writeStr(d, symbol)
+	d = writeStr(d, "")
+	d = writeStr(d, "")
+	return d
+}
+
+func TestHistoryDealsGetDecodesArray(t *testing.T) {
+	ctx := context.Background()
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		if cmdID == protocol.CmdHistoryDealsGet {
+			d := writeU32(nil, 6)
+			d = append(d, mockDeal(1000, "EURUSD", 0, 0, 0)...)
+			d = append(d, mockDeal(1001, "GBPUSD", 1, 1, 3)...)
+			d = append(d, mockDeal(1002, "USDJPY", 0, 0, 0)...)
+			d = append(d, mockDeal(1003, "EURUSD", 1, 1, 5)...)
+			d = append(d, mockDeal(1004, "AUDUSD", 0, 2, 0)...)
+			d = append(d, mockDeal(1005, "EURGBP", 1, 0, 4)...)
+			return true, d
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	deals, err := client.HistoryDealsGet(ctx, nil)
+	if err != nil {
+		t.Fatalf("history deals get: %v", err)
+	}
+	if len(deals) != 6 {
+		t.Fatalf("expected 6 deals, got %d", len(deals))
+	}
+
+	if deals[3].Ticket != 1003 {
+		t.Errorf("deals[3].Ticket: got %d, want 1003", deals[3].Ticket)
+	}
+	if deals[3].Symbol != "EURUSD" {
+		t.Errorf("deals[3].Symbol: got %q, want EURUSD", deals[3].Symbol)
+	}
+	if deals[1].Type != gomt5.DealTypeSell {
+		t.Errorf("deals[1].Type: got %v, want Sell", deals[1].Type)
+	}
+	if deals[1].Entry != gomt5.DealEntryOut {
+		t.Errorf("deals[1].Entry: got %v, want Out", deals[1].Entry)
+	}
+	if deals[3].Reason != 5 {
+		t.Errorf("deals[3].Reason: got %d, want 5", deals[3].Reason)
+	}
+	if deals[5].Profit != 12.34 {
+		t.Errorf("deals[5].Profit: got %v, want 12.34", deals[5].Profit)
 	}
 }
 
