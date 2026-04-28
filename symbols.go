@@ -82,20 +82,10 @@ func (c *Client) SymbolInfoTick(ctx context.Context, symbol string) (*Tick, erro
 	return tick, nil
 }
 
-// SymbolSelect adds (enable=true) or removes (enable=false) a symbol from
-// Market Watch. Mirrors MetaTrader5.symbol_select(symbol, enable).
-//
-// Wire format (cmd 171): [string symbol][int32 enable].
-// The enable flag is LE32 here, even though boolean *response* fields elsewhere
-// in the protocol are LE64 — confirmed via static analysis of _core.pyd.
 func (c *Client) SymbolSelect(ctx context.Context, symbol string, enable bool) error {
 	w := protocol.NewWriter()
 	w.WriteString(symbol)
-	if enable {
-		w.WriteU32(1)
-	} else {
-		w.WriteU32(0)
-	}
+	w.WriteBool(enable)
 
 	_, err := c.SendRaw(ctx, protocol.CmdSymbolSelect, w.Bytes())
 	return err

@@ -16,6 +16,18 @@ func NewWriter() *Writer {
 	return &Writer{buf: make([]byte, 0, 128)}
 }
 
+func (w *Writer) WriteU8(v uint8) {
+	w.buf = append(w.buf, v)
+}
+
+func (w *Writer) WriteBool(v bool) {
+	if v {
+		w.buf = append(w.buf, 1)
+	} else {
+		w.buf = append(w.buf, 0)
+	}
+}
+
 func (w *Writer) WriteU32(v uint32) {
 	w.buf = binary.LittleEndian.AppendUint32(w.buf, v)
 }
