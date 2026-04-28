@@ -77,9 +77,9 @@ func decodePositions(data []byte) ([]Position, error) {
 			PriceTP:       r.ReadF64(),
 			Swap:          r.ReadF64(),
 			Profit:        r.ReadF64(),
-			Symbol:        r.ReadString(),
-			Comment:       r.ReadString(),
-			ExternalID:    r.ReadString(),
+			Symbol:        r.ReadFixedString(64),
+			Comment:       r.ReadFixedString(64),
+			ExternalID:    r.ReadFixedString(64),
 		}
 		if r.Err() != nil {
 			return nil, fmt.Errorf("decode position %d: %w", i, r.Err())

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 	"math"
+	"os"
 	"testing"
 	"time"
 	"unicode/utf16"
@@ -125,6 +126,18 @@ func writeStr(buf []byte, s string) []byte {
 		buf = append(buf, b...)
 	}
 	return buf
+}
+
+func writeFixedStr(buf []byte, s string, slotBytes int) []byte {
+	runes := utf16.Encode([]rune(s))
+	slot := make([]byte, slotBytes)
+	for i, r := range runes {
+		if i*2+2 > slotBytes {
+			break
+		}
+		binary.LittleEndian.PutUint16(slot[i*2:], r)
+	}
+	return append(buf, slot...)
 }
 
 func TestInitAndVersion(t *testing.T) {
@@ -431,9 +444,9 @@ func mockPosition(ticket int64, symbol string) []byte {
 	d = writeF64(d, 1.0900)
 	d = writeF64(d, -0.5)
 	d = writeF64(d, 10.0)
-	d = writeStr(d, symbol)
-	d = writeStr(d, "")
-	d = writeStr(d, "")
+	d = writeFixedStr(d, symbol, 64)
+	d = writeFixedStr(d, "", 64)
+	d = writeFixedStr(d, "", 64)
 	return d
 }
 
@@ -519,9 +532,9 @@ func mockOrder(ticket int64, symbol string) []byte {
 	d = writeF64(d, 0)
 	d = writeF64(d, 0)
 	d = writeF64(d, 0)
-	d = writeStr(d, symbol)
-	d = writeStr(d, "")
-	d = writeStr(d, "")
+	d = writeFixedStr(d, symbol, 64)
+	d = writeFixedStr(d, "", 64)
+	d = writeFixedStr(d, "", 64)
 	return d
 }
 
@@ -593,9 +606,9 @@ func mockDeal(ticket int64, symbol string, dealType, entry, reason uint32) []byt
 	d = writeF64(d, 0)
 	d = writeF64(d, 12.34)
 	d = writeF64(d, 0)
-	d = writeStr(d, symbol)
-	d = writeStr(d, "")
-	d = writeStr(d, "")
+	d = writeFixedStr(d, symbol, 64)
+	d = writeFixedStr(d, "", 64)
+	d = writeFixedStr(d, "", 64)
 	return d
 }
 
@@ -650,6 +663,65 @@ func TestHistoryDealsGetDecodesArray(t *testing.T) {
 	}
 	if deals[5].Profit != 12.34 {
 		t.Errorf("deals[5].Profit: got %v, want 12.34", deals[5].Profit)
+	}
+}
+
+func TestHistoryDealsDecodeBuild5833Capture(t *testing.T) {
+	raw, err := os.ReadFile("testdata/history_deals_5833_242deals.bin")
+	if err != nil {
+		t.Fatalf("read testdata: %v", err)
+	}
+	if len(raw) < 12 {
+		t.Fatalf("capture too short: %d bytes", len(raw))
+	}
+
+	cmdEcho := binary.LittleEndian.Uint32(raw[4:8])
+	success := binary.LittleEndian.Uint32(raw[8:12])
+	if cmdEcho != protocol.CmdHistoryDealsGet {
+		t.Fatalf("cmd echo: expected %d, got %d", protocol.CmdHistoryDealsGet, cmdEcho)
+	}
+	if success != 1 {
+		t.Fatalf("success: expected 1, got %d", success)
+	}
+
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5833)
+		}
+		if cmdID == protocol.CmdHistoryDealsGet {
+			return true, raw[12:]
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	ctx := context.Background()
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	deals, err := client.HistoryDealsGet(ctx, nil)
+	if err != nil {
+		t.Fatalf("history deals get: %v", err)
+	}
+	if len(deals) != 242 {
+		t.Errorf("expected 242 deals, got %d", len(deals))
+	}
+
+	if len(deals) >= 2 {
+		if deals[1].Symbol != "AUDUSD" {
+			t.Errorf("deals[1].Symbol: got %q, want AUDUSD", deals[1].Symbol)
+		}
+		if deals[1].Volume != 0.05 {
+			t.Errorf("deals[1].Volume: got %v, want 0.05", deals[1].Volume)
+		}
+	}
+	if len(deals) >= 3 {
+		if deals[2].Symbol != ".BrentCrude" {
+			t.Errorf("deals[2].Symbol: got %q, want .BrentCrude", deals[2].Symbol)
+		}
 	}
 }
 

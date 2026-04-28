@@ -201,9 +201,9 @@ func decodeOrders(data []byte) ([]Order, error) {
 			PriceSL:        r.ReadF64(),
 			PriceTP:        r.ReadF64(),
 			PriceStopLimit: r.ReadF64(),
-			Symbol:         r.ReadString(),
-			Comment:        r.ReadString(),
-			ExternalID:     r.ReadString(),
+			Symbol:         r.ReadFixedString(64),
+			Comment:        r.ReadFixedString(64),
+			ExternalID:     r.ReadFixedString(64),
 		}
 		if r.Err() != nil {
 			return nil, fmt.Errorf("decode order %d: %w", i, r.Err())
