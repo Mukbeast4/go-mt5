@@ -184,34 +184,14 @@ func TestAccountInfo(t *testing.T) {
 		}
 		if cmdID == protocol.CmdAccountInfo {
 			var d []byte
-			d = writeI64(d, 12345)    // login
-			d = writeI64(d, 0)        // trade_mode
-			d = writeI64(d, 100)      // leverage
-			d = writeI64(d, 200)      // limit_orders
-			d = writeI64(d, 0)        // margin_so_mode
-			d = writeI64(d, 1)        // trade_allowed
-			d = writeI64(d, 1)        // trade_expert
-			d = writeI64(d, 0)        // margin_mode
-			d = writeI64(d, 2)        // currency_digits
-			d = writeI64(d, 0)        // fifo_close
-			d = writeF64(d, 10000.50) // balance
-			d = writeF64(d, 0)        // credit
-			d = writeF64(d, 150.25)   // profit
-			d = writeF64(d, 10150.75) // equity
-			d = writeF64(d, 500.0)    // margin
-			d = writeF64(d, 9650.75)  // free_margin
-			d = writeF64(d, 2030.15)  // margin_level
-			d = writeF64(d, 50.0)     // margin_so_call
-			d = writeF64(d, 30.0)     // margin_so_so
-			d = writeF64(d, 0)        // margin_initial
-			d = writeF64(d, 0)        // margin_maintenance
-			d = writeF64(d, 0)        // assets
-			d = writeF64(d, 0)        // liabilities
-			d = writeF64(d, 0)        // commission_blocked
-			d = writeStr(d, "Test User")
-			d = writeStr(d, "MetaQuotes-Demo")
-			d = writeStr(d, "USD")
-			d = writeStr(d, "MetaQuotes Ltd.")
+			d = writeI64(d, 12345)
+			// numeric header (build-specific, not decoded by us)
+			d = append(d, make([]byte, 139)...)
+			// 4 fixed-width string slots: 256 + 128 + 64 + 256 = 704 bytes
+			d = writeFixedStr(d, "Test User", 256)
+			d = writeFixedStr(d, "MetaQuotes-Demo", 128)
+			d = writeFixedStr(d, "USD", 64)
+			d = writeFixedStr(d, "MetaQuotes Ltd.", 256)
 			return true, d
 		}
 		return false, nil
@@ -231,20 +211,17 @@ func TestAccountInfo(t *testing.T) {
 	if info.Login != 12345 {
 		t.Errorf("login: expected 12345, got %d", info.Login)
 	}
-	if info.Balance != 10000.50 {
-		t.Errorf("balance: expected 10000.50, got %f", info.Balance)
-	}
-	if info.Leverage != 100 {
-		t.Errorf("leverage: expected 100, got %d", info.Leverage)
-	}
-	if !info.TradeAllowed {
-		t.Error("expected trade_allowed true")
-	}
-	if info.Currency != "USD" {
-		t.Errorf("currency: expected USD, got %s", info.Currency)
+	if info.Name != "Test User" {
+		t.Errorf("name: expected Test User, got %q", info.Name)
 	}
 	if info.Server != "MetaQuotes-Demo" {
-		t.Errorf("server: expected MetaQuotes-Demo, got %s", info.Server)
+		t.Errorf("server: expected MetaQuotes-Demo, got %q", info.Server)
+	}
+	if info.Currency != "USD" {
+		t.Errorf("currency: expected USD, got %q", info.Currency)
+	}
+	if info.Company != "MetaQuotes Ltd." {
+		t.Errorf("company: expected MetaQuotes Ltd., got %q", info.Company)
 	}
 }
 
