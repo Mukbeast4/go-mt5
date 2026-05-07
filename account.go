@@ -2,9 +2,22 @@ package gomt5
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
+)
+
+const (
+	accountInfoNameSlotBytes     = 256
+	accountInfoServerSlotBytes   = 128
+	accountInfoCurrencySlotBytes = 64
+	accountInfoCompanySlotBytes  = 256
+
+	accountInfoStringsTotalBytes = accountInfoNameSlotBytes +
+		accountInfoServerSlotBytes +
+		accountInfoCurrencySlotBytes +
+		accountInfoCompanySlotBytes
 )
 
 func (c *Client) Login(ctx context.Context, login int64, password, server string) error {
@@ -23,42 +36,23 @@ func (c *Client) AccountInfo(ctx context.Context) (*AccountInfo, error) {
 		return nil, err
 	}
 
-	r := protocol.NewReader(resp.Data)
-	info := &AccountInfo{
-		Login:          r.ReadI64(),
-		TradeMode:      r.ReadI64(),
-		Leverage:       r.ReadI64(),
-		LimitOrders:    r.ReadI64(),
-		MarginSOMode:   r.ReadI64(),
-		TradeAllowed:   r.ReadBool(),
-		TradeExpert:    r.ReadBool(),
-		MarginMode:     r.ReadI64(),
-		CurrencyDigits: r.ReadI64(),
-		FIFOClose:      r.ReadBool(),
-
-		Balance:           r.ReadF64(),
-		Credit:            r.ReadF64(),
-		Profit:            r.ReadF64(),
-		Equity:            r.ReadF64(),
-		Margin:            r.ReadF64(),
-		FreeMargin:        r.ReadF64(),
-		MarginLevel:       r.ReadF64(),
-		MarginSOCall:      r.ReadF64(),
-		MarginSOSO:        r.ReadF64(),
-		MarginInitial:     r.ReadF64(),
-		MarginMaintenance: r.ReadF64(),
-		Assets:            r.ReadF64(),
-		Liabilities:       r.ReadF64(),
-		CommissionBlocked: r.ReadF64(),
-
-		Name:     r.ReadString(),
-		Server:   r.ReadString(),
-		Currency: r.ReadString(),
-		Company:  r.ReadString(),
+	if len(resp.Data) < 8+accountInfoStringsTotalBytes {
+		return nil, fmt.Errorf("decode account info: response too short (%d bytes)", len(resp.Data))
 	}
 
-	if r.Err() != nil {
-		return nil, fmt.Errorf("decode account info: %w", r.Err())
+	info := &AccountInfo{
+		Login: int64(binary.LittleEndian.Uint64(resp.Data[0:8])),
+	}
+
+	stringsOffset := len(resp.Data) - accountInfoStringsTotalBytes
+	sr := protocol.NewReader(resp.Data[stringsOffset:])
+	info.Name = sr.ReadFixedString(accountInfoNameSlotBytes)
+	info.Server = sr.ReadFixedString(accountInfoServerSlotBytes)
+	info.Currency = sr.ReadFixedString(accountInfoCurrencySlotBytes)
+	info.Company = sr.ReadFixedString(accountInfoCompanySlotBytes)
+
+	if sr.Err() != nil {
+		return nil, fmt.Errorf("decode account info strings: %w", sr.Err())
 	}
 	return info, nil
 }
