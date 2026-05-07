@@ -3,6 +3,8 @@
 package pipe
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +12,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode/utf16"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -93,33 +96,83 @@ func (c *Conn) Close() error {
 }
 
 func Discover() (string, error) {
-	pattern := `\\.\pipe\*`
-	pipePath, err := windows.UTF16PtrFromString(pattern)
+	paths, err := findTerminal64Paths()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("locate terminal64.exe: %w", err)
+	}
+	if len(paths) == 0 {
+		return "", fmt.Errorf("no running terminal64.exe found")
 	}
 
-	var fd windows.Win32finddata
-	h, err := windows.FindFirstFile(pipePath, &fd)
-	if err != nil {
-		return "", fmt.Errorf("enumerate pipes: %w", err)
-	}
-	defer windows.FindClose(h)
-
-	for {
-		name := windows.UTF16ToString(fd.FileName[:])
-		nameLower := strings.ToLower(name)
-		if strings.Contains(nameLower, "mt5") || strings.Contains(nameLower, "metatrader") {
-			return `\\.\pipe\` + name, nil
+	for _, p := range paths {
+		pipeName := mt5PipeNameForPath(p)
+		conn, err := Open(pipeName, 500*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return pipeName, nil
 		}
+	}
 
-		err = windows.FindNextFile(h, &fd)
-		if err != nil {
+	return "", fmt.Errorf("no responding MT5 pipe (%d candidate(s))", len(paths))
+}
+
+func mt5PipeNameForPath(terminalPath string) string {
+	input := `\\?\` + strings.ToLower(terminalPath)
+	codes := utf16.Encode([]rune(input))
+	buf := make([]byte, len(codes)*2)
+	for i, c := range codes {
+		buf[i*2] = byte(c)
+		buf[i*2+1] = byte(c >> 8)
+	}
+	sum := sha256.Sum256(buf)
+	return `\\.\pipe\MT5.Terminal.` + strings.ToUpper(hex.EncodeToString(sum[:]))
+}
+
+func findTerminal64Paths() ([]string, error) {
+	const TH32CS_SNAPPROCESS = 0x2
+	snap, err := windows.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+	if err != nil {
+		return nil, fmt.Errorf("CreateToolhelp32Snapshot: %w", err)
+	}
+	defer windows.CloseHandle(snap)
+
+	var pe windows.ProcessEntry32
+	pe.Size = uint32(unsafe.Sizeof(pe))
+	if err := windows.Process32First(snap, &pe); err != nil {
+		return nil, fmt.Errorf("Process32First: %w", err)
+	}
+
+	var paths []string
+	seen := make(map[string]bool)
+	for {
+		exeName := windows.UTF16ToString(pe.ExeFile[:])
+		if strings.EqualFold(exeName, "terminal64.exe") {
+			if p, err := imagePathForPID(pe.ProcessID); err == nil && p != "" && !seen[p] {
+				seen[p] = true
+				paths = append(paths, p)
+			}
+		}
+		if err := windows.Process32Next(snap, &pe); err != nil {
 			break
 		}
 	}
+	return paths, nil
+}
 
-	return "", fmt.Errorf("no MT5 pipe found")
+func imagePathForPID(pid uint32) (string, error) {
+	const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+	h, err := windows.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+	if err != nil {
+		return "", err
+	}
+	defer windows.CloseHandle(h)
+
+	buf := make([]uint16, windows.MAX_PATH)
+	size := uint32(len(buf))
+	if err := windows.QueryFullProcessImageName(h, 0, &buf[0], &size); err != nil {
+		return "", err
+	}
+	return windows.UTF16ToString(buf[:size]), nil
 }
 
 func FindTerminalPath() (string, error) {
