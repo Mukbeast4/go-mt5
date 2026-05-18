@@ -3,7 +3,10 @@ package gomt5
 import (
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"log"
+	"math"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
 )
@@ -18,7 +21,11 @@ const (
 		accountInfoServerSlotBytes +
 		accountInfoCurrencySlotBytes +
 		accountInfoCompanySlotBytes
+
+	accountInfoMiddleBytes = 139
 )
+
+var accountInfoDebugOnce bool
 
 func (c *Client) Login(ctx context.Context, login int64, password, server string) error {
 	w := protocol.NewWriter()
@@ -40,11 +47,54 @@ func (c *Client) AccountInfo(ctx context.Context) (*AccountInfo, error) {
 		return nil, fmt.Errorf("decode account info: response too short (%d bytes)", len(resp.Data))
 	}
 
-	info := &AccountInfo{
-		Login: int64(binary.LittleEndian.Uint64(resp.Data[0:8])),
+	stringsOffset := len(resp.Data) - accountInfoStringsTotalBytes
+	middle := resp.Data[8:stringsOffset]
+
+	if !accountInfoDebugOnce {
+		accountInfoDebugOnce = true
+		log.Printf("[gomt5] AccountInfo debug: total=%d middle=%d strings_offset=%d",
+			len(resp.Data), len(middle), stringsOffset)
+		log.Printf("[gomt5] AccountInfo middle hex: %s", hex.EncodeToString(middle))
 	}
 
-	stringsOffset := len(resp.Data) - accountInfoStringsTotalBytes
+	if len(middle) < accountInfoMiddleBytes {
+		return nil, fmt.Errorf("decode account info: middle too short (%d bytes, want at least %d)", len(middle), accountInfoMiddleBytes)
+	}
+
+	readF64 := func(off int) float64 {
+		return math.Float64frombits(binary.LittleEndian.Uint64(middle[off : off+8]))
+	}
+	readI32 := func(off int) int64 {
+		return int64(int32(binary.LittleEndian.Uint32(middle[off : off+4])))
+	}
+
+	info := &AccountInfo{
+		Login:             int64(binary.LittleEndian.Uint64(resp.Data[0:8])),
+		TradeMode:         readI32(0),
+		Leverage:          readI32(4),
+		LimitOrders:       readI32(8),
+		MarginSOMode:      readI32(12),
+		TradeAllowed:      middle[16] != 0,
+		TradeExpert:       middle[17] != 0,
+		MarginMode:        readI32(18),
+		CurrencyDigits:    readI32(22),
+		FIFOClose:         middle[26] != 0,
+		Balance:           readF64(27),
+		Credit:            readF64(35),
+		Profit:            readF64(43),
+		Equity:            readF64(51),
+		Margin:            readF64(59),
+		FreeMargin:        readF64(67),
+		MarginLevel:       readF64(75),
+		MarginSOCall:      readF64(83),
+		MarginSOSO:        readF64(91),
+		MarginInitial:     readF64(99),
+		MarginMaintenance: readF64(107),
+		Assets:            readF64(115),
+		Liabilities:       readF64(123),
+		CommissionBlocked: readF64(131),
+	}
+
 	sr := protocol.NewReader(resp.Data[stringsOffset:])
 	info.Name = sr.ReadFixedString(accountInfoNameSlotBytes)
 	info.Server = sr.ReadFixedString(accountInfoServerSlotBytes)
