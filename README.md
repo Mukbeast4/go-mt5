@@ -181,6 +181,16 @@ Response: [payload_len:LE32][cmd_echo:LE32][success:LE32][data...]
 | Request validation | `TradeRequest.Validate()` |
 | Auto-reconnect | `WithAutoReconnect(true)` |
 
+## Changelog
+
+### v0.1.8
+
+Full `AccountInfo` decoder. v0.1.7 only populated `Login` and the four trailing string slots (`Name`, `Server`, `Currency`, `Company`); every numeric and boolean field in between stayed at its zero value, so consumers saw `Balance`, `Equity`, `Margin`, `FreeMargin`, `MarginLevel`, `Profit`, `Credit`, `CurrencyDigits`, `MarginMode`, `TradeAllowed`, etc. all read as `0`/`false`.
+
+This release decodes all 24 of those fields from the real MT5 wire layout. The middle of the `CmdAccountInfo` response is 139 bytes packed without alignment padding: 4 × `int32`, 2 × 1-byte `bool`, 2 × `int32`, 1 × 1-byte `bool`, then 14 × `float64`. Note that integers are 4 bytes (not 8) and booleans are 1 byte (not LE64) — this is build-5684 layout, verified against a live TradersWay demo account.
+
+A one-shot `[gomt5] AccountInfo debug: ...` log fires on the first call and dumps the middle bytes as hex, so future MT5 builds with a different middle length can be diagnosed quickly. It is intended to be removed in v0.1.9 once we have confirmation that the layout is stable across builds in the wild.
+
 ## Upgrading from v0.1.0
 
 All public methods now require `context.Context` as the first parameter:
