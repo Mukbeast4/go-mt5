@@ -2,10 +2,15 @@ package gomt5
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
+	"log"
+	"sync"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
 )
+
+var symbolInfoTickDebugSeen sync.Map
 
 func (c *Client) SymbolsTotal(ctx context.Context) (int, error) {
 	resp, err := c.send(ctx, protocol.CmdSymbolsTotal, nil)
@@ -69,9 +74,20 @@ func (c *Client) SymbolInfoTick(ctx context.Context, symbol string) (*Tick, erro
 	w := protocol.NewWriter()
 	w.WriteString(symbol)
 
-	resp, err := c.send(ctx, protocol.CmdSymbolInfoTick, w.Bytes())
+	sentParams := w.Bytes()
+	if _, loaded := symbolInfoTickDebugSeen.LoadOrStore(symbol+":sent", struct{}{}); !loaded {
+		log.Printf("[gomt5] SymbolInfoTick request debug: symbol=%s total=%d hex=%s",
+			symbol, len(sentParams), hex.EncodeToString(sentParams))
+	}
+
+	resp, err := c.send(ctx, protocol.CmdSymbolInfoTick, sentParams)
 	if err != nil {
 		return nil, err
+	}
+
+	if _, loaded := symbolInfoTickDebugSeen.LoadOrStore(symbol+":recv", struct{}{}); !loaded {
+		log.Printf("[gomt5] SymbolInfoTick response debug: symbol=%s total=%d hex=%s",
+			symbol, len(resp.Data), hex.EncodeToString(resp.Data))
 	}
 
 	r := protocol.NewReader(resp.Data)
