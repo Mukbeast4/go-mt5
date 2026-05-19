@@ -2,9 +2,18 @@ package gomt5
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
+	"log"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
+)
+
+var (
+	orderCheckSentDebugOnce bool
+	orderCheckRecvDebugOnce bool
+	orderSendSentDebugOnce  bool
+	orderSendRecvDebugOnce  bool
 )
 
 func (c *Client) OrderSend(ctx context.Context, request TradeRequest) (*TradeResult, error) {
@@ -27,9 +36,22 @@ func (c *Client) OrderSend(ctx context.Context, request TradeRequest) (*TradeRes
 	w.WriteI64(request.Position)
 	w.WriteI64(request.PositionBy)
 
-	data, err := c.SendRaw(ctx, protocol.CmdOrderSend, w.Bytes())
+	sentParams := w.Bytes()
+	if !orderSendSentDebugOnce {
+		orderSendSentDebugOnce = true
+		log.Printf("[gomt5] OrderSend request debug: total=%d hex=%s",
+			len(sentParams), hex.EncodeToString(sentParams))
+	}
+
+	data, err := c.SendRaw(ctx, protocol.CmdOrderSend, sentParams)
 	if err != nil {
 		return nil, err
+	}
+
+	if !orderSendRecvDebugOnce {
+		orderSendRecvDebugOnce = true
+		log.Printf("[gomt5] OrderSend response debug: total=%d hex=%s",
+			len(data), hex.EncodeToString(data))
 	}
 
 	r := protocol.NewReader(data)
@@ -63,9 +85,22 @@ func (c *Client) OrderCheck(ctx context.Context, request TradeRequest) (*CheckRe
 	w.WriteU32(uint32(request.Type))
 	w.WriteU32(uint32(request.TypeFilling))
 
-	data, err := c.SendRaw(ctx, protocol.CmdOrderCheck, w.Bytes())
+	sentParams := w.Bytes()
+	if !orderCheckSentDebugOnce {
+		orderCheckSentDebugOnce = true
+		log.Printf("[gomt5] OrderCheck request debug: total=%d hex=%s",
+			len(sentParams), hex.EncodeToString(sentParams))
+	}
+
+	data, err := c.SendRaw(ctx, protocol.CmdOrderCheck, sentParams)
 	if err != nil {
 		return nil, err
+	}
+
+	if !orderCheckRecvDebugOnce {
+		orderCheckRecvDebugOnce = true
+		log.Printf("[gomt5] OrderCheck response debug: total=%d hex=%s",
+			len(data), hex.EncodeToString(data))
 	}
 
 	r := protocol.NewReader(data)
