@@ -269,6 +269,7 @@ func TestSymbolInfoTick(t *testing.T) {
 			d = writeI64(d, 0)             // volume (u64)
 			d = writeI64(d, 1710000000123) // time_msc
 			d = writeU32(d, 6)             // flags
+			d = writeF64(d, 0)             // volume_real
 			return true, d
 		}
 		return false, nil
@@ -810,17 +811,8 @@ func TestOrderSendEncodesPackedRequest(t *testing.T) {
 		}
 		if cmdID == protocol.CmdOrderSend {
 			captured = append(captured[:0], params...)
-			var resp []byte
-			resp = writeU32(resp, 10009)
-			resp = writeI64(resp, 0)
-			resp = writeI64(resp, 0)
-			resp = writeF64(resp, 0)
-			resp = writeF64(resp, 0)
-			resp = writeF64(resp, 0)
-			resp = writeF64(resp, 0)
-			resp = writeStr(resp, "")
-			resp = writeU32(resp, 0)
-			resp = writeU32(resp, 0)
+			resp := make([]byte, 260)
+			binary.LittleEndian.PutUint32(resp[0:4], 10009)
 			return true, resp
 		}
 		return false, nil
@@ -881,12 +873,7 @@ func TestOrderCheckEncodesPackedRequest(t *testing.T) {
 		}
 		if cmdID == protocol.CmdOrderCheck {
 			captured = append(captured[:0], params...)
-			var resp []byte
-			resp = writeU32(resp, 0)
-			for i := 0; i < 6; i++ {
-				resp = writeF64(resp, 0)
-			}
-			resp = writeStr(resp, "")
+			resp := make([]byte, 252)
 			return true, resp
 		}
 		return false, nil
@@ -960,4 +947,184 @@ func utf16Decode(slot []byte) string {
 		u16 = append(u16, c)
 	}
 	return string(utf16.Decode(u16))
+}
+
+func TestOrderCheckDecodesPackedResponse(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/order_check_done.bin")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	if len(fixture) != 252 {
+		t.Fatalf("fixture size: expected 252, got %d", len(fixture))
+	}
+	ctx := context.Background()
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		if cmdID == protocol.CmdOrderCheck {
+			return true, fixture
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	res, err := client.OrderCheck(ctx, gomt5.TradeRequest{
+		Action:      gomt5.TradeActionDeal,
+		Symbol:      "EURUSD",
+		Volume:      0.01,
+		Type:        gomt5.OrderTypeBuy,
+		TypeFilling: gomt5.OrderFillingIOC,
+	})
+	if err != nil {
+		t.Fatalf("order check: %v", err)
+	}
+
+	if res.Retcode != 0 {
+		t.Errorf("retcode: expected 0, got %d", res.Retcode)
+	}
+	if res.Balance != 103000 {
+		t.Errorf("balance: expected 103000, got %f", res.Balance)
+	}
+	if res.Equity != 103000 {
+		t.Errorf("equity: expected 103000, got %f", res.Equity)
+	}
+	if res.Profit != 0 {
+		t.Errorf("profit: expected 0, got %f", res.Profit)
+	}
+	if res.Margin != 2.0 {
+		t.Errorf("margin: expected 2, got %f", res.Margin)
+	}
+	if res.MarginFree != 102998 {
+		t.Errorf("margin_free: expected 102998, got %f", res.MarginFree)
+	}
+	if res.MarginLevel != 5150000 {
+		t.Errorf("margin_level: expected 5150000, got %f", res.MarginLevel)
+	}
+	if res.Comment != "Done" {
+		t.Errorf("comment: expected \"Done\", got %q", res.Comment)
+	}
+}
+
+func TestOrderSendDecodesPackedResponse(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/order_send_done.bin")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	if len(fixture) != 260 {
+		t.Fatalf("fixture size: expected 260, got %d", len(fixture))
+	}
+	ctx := context.Background()
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		if cmdID == protocol.CmdOrderSend {
+			return true, fixture
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	res, err := client.OrderSend(ctx, gomt5.TradeRequest{
+		Action:      gomt5.TradeActionDeal,
+		Symbol:      "EURUSD",
+		Volume:      0.01,
+		Type:        gomt5.OrderTypeBuy,
+		TypeFilling: gomt5.OrderFillingIOC,
+	})
+	if err != nil {
+		t.Fatalf("order send: %v", err)
+	}
+
+	if res.Retcode != 10009 {
+		t.Errorf("retcode: expected 10009, got %d", res.Retcode)
+	}
+	if res.Deal != 18785220 {
+		t.Errorf("deal: expected 18785220, got %d", res.Deal)
+	}
+	if res.Order != 27822128 {
+		t.Errorf("order: expected 27822128, got %d", res.Order)
+	}
+	if res.Volume != 0.01 {
+		t.Errorf("volume: expected 0.01, got %f", res.Volume)
+	}
+	if math.Abs(res.Price-1.16218) > 1e-9 {
+		t.Errorf("price: expected ~1.16218, got %f", res.Price)
+	}
+	if math.Abs(res.Bid-1.16213) > 1e-9 {
+		t.Errorf("bid: expected ~1.16213, got %f", res.Bid)
+	}
+	if math.Abs(res.Ask-1.16218) > 1e-9 {
+		t.Errorf("ask: expected ~1.16218, got %f", res.Ask)
+	}
+	if res.Comment != "Request executed" {
+		t.Errorf("comment: expected \"Request executed\", got %q", res.Comment)
+	}
+	if res.RequestID != 2316072679 {
+		t.Errorf("request_id: expected 2316072679, got %d", res.RequestID)
+	}
+	if res.RetcodeExt != 0 {
+		t.Errorf("retcode_ext: expected 0, got %d", res.RetcodeExt)
+	}
+}
+
+func TestSymbolInfoTickDecodesVolumeReal(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/tick_eurusd.bin")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	if len(fixture) != 60 {
+		t.Fatalf("fixture size: expected 60, got %d", len(fixture))
+	}
+	ctx := context.Background()
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		if cmdID == protocol.CmdSymbolInfoTick {
+			return true, fixture
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	tick, err := client.SymbolInfoTick(ctx, "EURUSD")
+	if err != nil {
+		t.Fatalf("symbol info tick: %v", err)
+	}
+
+	if math.Abs(tick.Bid-1.16177) > 1e-4 {
+		t.Errorf("bid: expected ~1.16177, got %f", tick.Bid)
+	}
+	if math.Abs(tick.Ask-1.16189) > 1e-4 {
+		t.Errorf("ask: expected ~1.16189, got %f", tick.Ask)
+	}
+	if tick.TimeMsc != 1779194693301 {
+		t.Errorf("time_msc: expected 1779194693301, got %d", tick.TimeMsc)
+	}
+	if tick.Flags != 0x406 {
+		t.Errorf("flags: expected 0x406, got 0x%x", tick.Flags)
+	}
+	if tick.VolumeReal != 0 {
+		t.Errorf("volume_real: expected 0, got %f", tick.VolumeReal)
+	}
 }

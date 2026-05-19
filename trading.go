@@ -2,9 +2,11 @@ package gomt5
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"log"
+	"math"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
 )
@@ -20,6 +22,11 @@ const (
 	tradeRequestSymbolSlotBytes  = 64
 	tradeRequestCommentSlotBytes = 64
 	tradeRequestTotalBytes       = 232
+
+	checkResultCommentSlotBytes = 200
+	checkResultTotalBytes       = 252
+	tradeResultCommentSlotBytes = 200
+	tradeResultTotalBytes       = 260
 )
 
 func (c *Client) OrderSend(ctx context.Context, request TradeRequest) (*TradeResult, error) {
@@ -60,22 +67,30 @@ func (c *Client) OrderSend(ctx context.Context, request TradeRequest) (*TradeRes
 			len(data), hex.EncodeToString(data))
 	}
 
-	r := protocol.NewReader(data)
+	if len(data) < tradeResultTotalBytes {
+		return nil, fmt.Errorf("decode trade result: response too short (%d bytes, want %d)",
+			len(data), tradeResultTotalBytes)
+	}
+
+	readF64 := func(off int) float64 {
+		return math.Float64frombits(binary.LittleEndian.Uint64(data[off : off+8]))
+	}
 	result := &TradeResult{
-		Retcode:    r.ReadU32(),
-		Deal:       r.ReadI64(),
-		Order:      r.ReadI64(),
-		Volume:     r.ReadF64(),
-		Price:      r.ReadF64(),
-		Bid:        r.ReadF64(),
-		Ask:        r.ReadF64(),
-		Comment:    r.ReadString(),
-		RequestID:  r.ReadU32(),
-		RetcodeExt: r.ReadI32(),
+		Retcode: binary.LittleEndian.Uint32(data[0:4]),
+		Deal:    int64(binary.LittleEndian.Uint64(data[4:12])),
+		Order:   int64(binary.LittleEndian.Uint64(data[12:20])),
+		Volume:  readF64(20),
+		Price:   readF64(28),
+		Bid:     readF64(36),
+		Ask:     readF64(44),
 	}
-	if r.Err() != nil {
-		return nil, fmt.Errorf("decode trade result: %w", r.Err())
+	sr := protocol.NewReader(data[52 : 52+tradeResultCommentSlotBytes])
+	result.Comment = sr.ReadFixedString(tradeResultCommentSlotBytes)
+	if sr.Err() != nil {
+		return nil, fmt.Errorf("decode trade result comment: %w", sr.Err())
 	}
+	result.RequestID = binary.LittleEndian.Uint32(data[252:256])
+	result.RetcodeExt = int32(binary.LittleEndian.Uint32(data[256:260]))
 	return result, nil
 }
 
@@ -117,19 +132,27 @@ func (c *Client) OrderCheck(ctx context.Context, request TradeRequest) (*CheckRe
 			len(data), hex.EncodeToString(data))
 	}
 
-	r := protocol.NewReader(data)
-	result := &CheckResult{
-		Retcode:     r.ReadU32(),
-		Balance:     r.ReadF64(),
-		Equity:      r.ReadF64(),
-		Profit:      r.ReadF64(),
-		Margin:      r.ReadF64(),
-		MarginFree:  r.ReadF64(),
-		MarginLevel: r.ReadF64(),
-		Comment:     r.ReadString(),
+	if len(data) < checkResultTotalBytes {
+		return nil, fmt.Errorf("decode check result: response too short (%d bytes, want %d)",
+			len(data), checkResultTotalBytes)
 	}
-	if r.Err() != nil {
-		return nil, fmt.Errorf("decode check result: %w", r.Err())
+
+	readF64 := func(off int) float64 {
+		return math.Float64frombits(binary.LittleEndian.Uint64(data[off : off+8]))
+	}
+	result := &CheckResult{
+		Retcode:     binary.LittleEndian.Uint32(data[0:4]),
+		Balance:     readF64(4),
+		Equity:      readF64(12),
+		Profit:      readF64(20),
+		Margin:      readF64(28),
+		MarginFree:  readF64(36),
+		MarginLevel: readF64(44),
+	}
+	sr := protocol.NewReader(data[52 : 52+checkResultCommentSlotBytes])
+	result.Comment = sr.ReadFixedString(checkResultCommentSlotBytes)
+	if sr.Err() != nil {
+		return nil, fmt.Errorf("decode check result comment: %w", sr.Err())
 	}
 	return result, nil
 }

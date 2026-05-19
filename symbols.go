@@ -261,12 +261,13 @@ func decodeSymbolInfo(r *protocol.Reader) *SymbolInfo {
 
 func decodeTick(r *protocol.Reader) *Tick {
 	return &Tick{
-		Time:    r.ReadI64(),
-		Bid:     r.ReadF64(),
-		Ask:     r.ReadF64(),
-		Last:    r.ReadF64(),
-		Volume:  r.ReadU64(),
-		TimeMsc: r.ReadI64(),
-		Flags:   r.ReadU32(),
+		Time:       r.ReadI64(),
+		Bid:        r.ReadF64(),
+		Ask:        r.ReadF64(),
+		Last:       r.ReadF64(),
+		Volume:     r.ReadU64(),
+		TimeMsc:    r.ReadI64(),
+		Flags:      r.ReadU32(),
+		VolumeReal: r.ReadF64(),
 	}
 }
