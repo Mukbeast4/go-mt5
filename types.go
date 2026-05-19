@@ -162,13 +162,14 @@ type SymbolInfo struct {
 }
 
 type Tick struct {
-	Time    int64   `json:"time"`
-	Bid     float64 `json:"bid"`
-	Ask     float64 `json:"ask"`
-	Last    float64 `json:"last"`
-	Volume  uint64  `json:"volume"`
-	TimeMsc int64   `json:"time_msc"`
-	Flags   uint32  `json:"flags"`
+	Time       int64   `json:"time"`
+	Bid        float64 `json:"bid"`
+	Ask        float64 `json:"ask"`
+	Last       float64 `json:"last"`
+	Volume     uint64  `json:"volume"`
+	TimeMsc    int64   `json:"time_msc"`
+	Flags      uint32  `json:"flags"`
+	VolumeReal float64 `json:"volume_real"`
 }
 
 type Rate struct {
