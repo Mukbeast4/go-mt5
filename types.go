@@ -282,6 +282,7 @@ type Position struct {
 	PriceTP       float64      `json:"price_tp"`
 	Swap          float64      `json:"swap"`
 	Profit        float64      `json:"profit"`
+	Commission    float64      `json:"commission"`
 	Symbol        string       `json:"symbol"`
 	Comment       string       `json:"comment"`
 	ExternalID    string       `json:"external_id"`
