@@ -3,6 +3,7 @@ package gomt5_test
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"io"
 	"math"
 	"os"
@@ -798,4 +799,165 @@ func (l testLogger) Debug(msg string, args ...any) {
 	if l.onLog != nil {
 		l.onLog()
 	}
+}
+
+func TestOrderSendEncodesPackedRequest(t *testing.T) {
+	ctx := context.Background()
+	var captured []byte
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		if cmdID == protocol.CmdOrderSend {
+			captured = append(captured[:0], params...)
+			var resp []byte
+			resp = writeU32(resp, 10009)
+			resp = writeI64(resp, 0)
+			resp = writeI64(resp, 0)
+			resp = writeF64(resp, 0)
+			resp = writeF64(resp, 0)
+			resp = writeF64(resp, 0)
+			resp = writeF64(resp, 0)
+			resp = writeStr(resp, "")
+			resp = writeU32(resp, 0)
+			resp = writeU32(resp, 0)
+			return true, resp
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	req := gomt5.TradeRequest{
+		Action:      gomt5.TradeActionDeal,
+		Symbol:      "EURUSD",
+		Volume:      0.01,
+		Type:        gomt5.OrderTypeBuy,
+		TypeFilling: gomt5.OrderFillingIOC,
+		Deviation:   20,
+		Comment:     "t",
+	}
+	if _, err := client.OrderSend(ctx, req); err != nil {
+		t.Fatalf("order send: %v", err)
+	}
+
+	if len(captured) != 232 {
+		t.Fatalf("request size: expected 232, got %d", len(captured))
+	}
+	if got := binary.LittleEndian.Uint32(captured[0:4]); got != 1 {
+		t.Errorf("action @0: expected 1, got %d", got)
+	}
+	if got := utf16Decode(captured[20:84]); got != "EURUSD" {
+		t.Errorf("symbol slot @20: expected EURUSD, got %q", got)
+	}
+	if got := math.Float64frombits(binary.LittleEndian.Uint64(captured[84:92])); got != 0.01 {
+		t.Errorf("volume @84: expected 0.01, got %f", got)
+	}
+	if got := binary.LittleEndian.Uint64(captured[124:132]); got != 20 {
+		t.Errorf("deviation @124 (u64): expected 20, got %d", got)
+	}
+	if got := binary.LittleEndian.Uint32(captured[136:140]); got != 1 {
+		t.Errorf("type_filling @136: expected 1, got %d", got)
+	}
+	if got := utf16Decode(captured[152:216]); got != "t" {
+		t.Errorf("comment slot @152: expected \"t\", got %q", got)
+	}
+	if got := binary.LittleEndian.Uint64(captured[224:232]); got != 0 {
+		t.Errorf("position_by @224: expected 0, got %d", got)
+	}
+}
+
+func TestOrderCheckEncodesPackedRequest(t *testing.T) {
+	ctx := context.Background()
+	var captured []byte
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		if cmdID == protocol.CmdOrderCheck {
+			captured = append(captured[:0], params...)
+			var resp []byte
+			resp = writeU32(resp, 0)
+			for i := 0; i < 6; i++ {
+				resp = writeF64(resp, 0)
+			}
+			resp = writeStr(resp, "")
+			return true, resp
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	req := gomt5.TradeRequest{
+		Action:      gomt5.TradeActionDeal,
+		Symbol:      "EURUSD",
+		Volume:      0.01,
+		Type:        gomt5.OrderTypeBuy,
+		TypeFilling: gomt5.OrderFillingIOC,
+		Deviation:   20,
+	}
+	if _, err := client.OrderCheck(ctx, req); err != nil {
+		t.Fatalf("order check: %v", err)
+	}
+
+	if len(captured) != 232 {
+		t.Fatalf("request size: expected 232, got %d", len(captured))
+	}
+	if got := binary.LittleEndian.Uint32(captured[0:4]); got != 1 {
+		t.Errorf("action @0: expected 1, got %d", got)
+	}
+	if got := utf16Decode(captured[20:84]); got != "EURUSD" {
+		t.Errorf("symbol slot @20: expected EURUSD, got %q", got)
+	}
+	if got := binary.LittleEndian.Uint64(captured[124:132]); got != 20 {
+		t.Errorf("deviation @124 (u64): expected 20, got %d", got)
+	}
+}
+
+func TestSymbolInfoTickReturnsErrNoTickOnEmptyResponse(t *testing.T) {
+	ctx := context.Background()
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5684)
+		}
+		if cmdID == protocol.CmdSymbolInfoTick {
+			return true, nil
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	tick, err := client.SymbolInfoTick(ctx, "FTSE")
+	if !errors.Is(err, gomt5.ErrNoTick) {
+		t.Fatalf("expected ErrNoTick, got tick=%+v err=%v", tick, err)
+	}
+}
+
+func utf16Decode(slot []byte) string {
+	u16 := make([]uint16, 0, len(slot)/2)
+	for i := 0; i+1 < len(slot); i += 2 {
+		c := binary.LittleEndian.Uint16(slot[i:])
+		if c == 0 {
+			break
+		}
+		u16 = append(u16, c)
+	}
+	return string(utf16.Decode(u16))
 }

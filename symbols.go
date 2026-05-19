@@ -90,6 +90,10 @@ func (c *Client) SymbolInfoTick(ctx context.Context, symbol string) (*Tick, erro
 			symbol, len(resp.Data), hex.EncodeToString(resp.Data))
 	}
 
+	if len(resp.Data) == 0 {
+		return nil, ErrNoTick
+	}
+
 	r := protocol.NewReader(resp.Data)
 	tick := decodeTick(r)
 	if r.Err() != nil {
