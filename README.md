@@ -239,16 +239,9 @@ Decoders: `CheckResult` (252 B), `TradeResult` (260 B), and the `Tick` (60 B) re
 
 Robustness: `SymbolInfoTick` surfaces an empty payload as the new `ErrNoTick` sentinel instead of `unexpected EOF`. `SubscribeTicks` silently retries on `ErrNoTick`, eliminating spurious "Subscribe X failed" lines for index CFDs on closed sessions.
 
-Validated on TradersWay-Demo: two distinct EURUSD market trades executed cleanly (deal/order tickets, comment "Request executed"), zero decode errors over multi-minute runs. The one-shot `[gomt5] AccountInfo debug` log from v0.1.8 and the temporary `OrderCheck` / `OrderSend` / `SymbolInfoTick` diagnostic logs are removed.
+Validated on TradersWay-Demo: two distinct EURUSD market trades executed cleanly (deal/order tickets, comment "Request executed"), zero decode errors over multi-minute runs. The temporary `[gomt5] *Debug` diagnostic logs from earlier releases are removed.
 
-### v0.1.8
-
-Full `AccountInfo` decoder. v0.1.7 only populated `Login` and the trailing string fields (`Name`, `Server`, `Currency`, `Company`); every numeric and boolean field in between (`Balance`, `Equity`, `Margin`, `FreeMargin`, `Profit`, `Credit`, etc.) read as `0`/`false`. This release decodes the full 139-byte middle of `CmdAccountInfo` against the real MT5 wire layout (4×int32, 2×bool1, 2×int32, 1×bool1, 14×float64 — no alignment padding), verified against a live build-5684 demo. A one-shot `[gomt5] AccountInfo debug: ...` hex log fires on the first call to help diagnose future build drift; it is intended to be removed in v0.1.9 once layout stability is confirmed.
-
-Other fixes:
-- `pipe.Discover()` uses native SHA-256 over `terminal64.exe` path (no external tools).
-- Deals / orders / positions string fields decoded as fixed-width slots.
-- ENUM field widths corrected across history / trading / positions decoders.
+For older releases, see the [GitHub releases page](https://github.com/Mukbeast4/go-mt5/releases).
 
 ## Contributing
 
