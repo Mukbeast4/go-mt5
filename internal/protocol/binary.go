@@ -56,6 +56,29 @@ func (w *Writer) WriteString(s string) {
 	}
 }
 
+func (w *Writer) WriteFixedString(s string, slotBytes int) {
+	if slotBytes <= 0 || slotBytes%2 != 0 {
+		panic("WriteFixedString: slotBytes must be a positive even number")
+	}
+	start := len(w.buf)
+	w.buf = append(w.buf, make([]byte, slotBytes)...)
+	runes := utf16.Encode([]rune(s))
+	maxChars := (slotBytes / 2) - 1
+	if len(runes) > maxChars {
+		runes = runes[:maxChars]
+	}
+	for i, r := range runes {
+		binary.LittleEndian.PutUint16(w.buf[start+i*2:], r)
+	}
+}
+
+func (w *Writer) WriteZeros(n int) {
+	if n <= 0 {
+		return
+	}
+	w.buf = append(w.buf, make([]byte, n)...)
+}
+
 func (w *Writer) Bytes() []byte {
 	return w.buf
 }

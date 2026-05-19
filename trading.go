@@ -16,23 +16,29 @@ var (
 	orderSendRecvDebugOnce  bool
 )
 
+const (
+	tradeRequestSymbolSlotBytes  = 64
+	tradeRequestCommentSlotBytes = 64
+	tradeRequestTotalBytes       = 232
+)
+
 func (c *Client) OrderSend(ctx context.Context, request TradeRequest) (*TradeResult, error) {
 	w := protocol.NewWriter()
 	w.WriteU32(uint32(request.Action))
 	w.WriteI64(request.Magic)
 	w.WriteI64(request.Order)
-	w.WriteString(request.Symbol)
+	w.WriteFixedString(request.Symbol, tradeRequestSymbolSlotBytes)
 	w.WriteF64(request.Volume)
 	w.WriteF64(request.Price)
 	w.WriteF64(request.StopLimit)
 	w.WriteF64(request.SL)
 	w.WriteF64(request.TP)
-	w.WriteU32(uint32(request.Deviation))
+	w.WriteU64(uint64(request.Deviation))
 	w.WriteU32(uint32(request.Type))
 	w.WriteU32(uint32(request.TypeFilling))
 	w.WriteU32(uint32(request.TypeTime))
 	w.WriteI64(request.Expiration)
-	w.WriteString(request.Comment)
+	w.WriteFixedString(request.Comment, tradeRequestCommentSlotBytes)
 	w.WriteI64(request.Position)
 	w.WriteI64(request.PositionBy)
 
@@ -76,14 +82,22 @@ func (c *Client) OrderSend(ctx context.Context, request TradeRequest) (*TradeRes
 func (c *Client) OrderCheck(ctx context.Context, request TradeRequest) (*CheckResult, error) {
 	w := protocol.NewWriter()
 	w.WriteU32(uint32(request.Action))
-	w.WriteString(request.Symbol)
+	w.WriteI64(request.Magic)
+	w.WriteI64(request.Order)
+	w.WriteFixedString(request.Symbol, tradeRequestSymbolSlotBytes)
 	w.WriteF64(request.Volume)
 	w.WriteF64(request.Price)
+	w.WriteF64(request.StopLimit)
 	w.WriteF64(request.SL)
 	w.WriteF64(request.TP)
-	w.WriteU32(uint32(request.Deviation))
+	w.WriteU64(uint64(request.Deviation))
 	w.WriteU32(uint32(request.Type))
 	w.WriteU32(uint32(request.TypeFilling))
+	w.WriteU32(uint32(request.TypeTime))
+	w.WriteI64(request.Expiration)
+	w.WriteFixedString(request.Comment, tradeRequestCommentSlotBytes)
+	w.WriteI64(request.Position)
+	w.WriteI64(request.PositionBy)
 
 	sentParams := w.Bytes()
 	if !orderCheckSentDebugOnce {

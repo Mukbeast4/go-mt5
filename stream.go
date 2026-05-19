@@ -2,6 +2,7 @@ package gomt5
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -32,7 +33,7 @@ func (c *Client) SubscribeTicksWithErrors(ctx context.Context, symbol string) (<
 }
 
 func (c *Client) subscribeTicks(ctx context.Context, symbol string, withErrors bool) (<-chan Tick, <-chan error, error) {
-	if _, err := c.SymbolInfoTick(ctx, symbol); err != nil {
+	if _, err := c.SymbolInfoTick(ctx, symbol); err != nil && !errors.Is(err, ErrNoTick) {
 		return nil, nil, err
 	}
 
@@ -101,6 +102,9 @@ func (c *Client) pollTicks(ctx context.Context, symbol string, sub *tickSub, int
 			if err != nil {
 				if ctx.Err() != nil {
 					return
+				}
+				if errors.Is(err, ErrNoTick) {
+					continue
 				}
 				if sub.errCh != nil {
 					select {
