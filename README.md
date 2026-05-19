@@ -229,6 +229,14 @@ go-mt5/
 
 ## Changelog
 
+### v0.1.10
+
+`PositionsGet` decoder corrected against the live MT5 wire layout. The previous implementation rotated `PriceSL`, `PriceTP`, and `PriceCurrent` and skipped the `Commission` F64, so each record was misread by 8 bytes from offset 80 onward — symbols came back as CJK glyphs, current prices and profits were garbage. Fix moves SL/TP/Current into wire order, inserts `Commission` between `PriceCurrent` and `Swap`, and adds `Commission float64` to the `Position` struct.
+
+Regression coverage: `positions_decode_test.go` decodes a real 4-position EURUSD capture (`testdata/positions_4buys_eurusd.bin`) and asserts the table against the live MT5 terminal snapshot, plus a synthetic-array test parallel to `TestSymbolsGetDecodesArray`. Closes #17.
+
+Validated end-to-end against a trd-pld dashboard on a TradersWay demo: symbols, volumes, prices, profits, and commissions all match what the MT5 terminal shows.
+
 ### v0.1.9
 
 Trade pipeline end-to-end against a real MT5 demo. v0.1.8 only fixed `AccountInfo`; this release closes the same class of bug across the trade RPCs.
