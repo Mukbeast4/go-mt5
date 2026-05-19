@@ -3,19 +3,10 @@ package gomt5
 import (
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
-	"log"
 	"math"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
-)
-
-var (
-	orderCheckSentDebugOnce bool
-	orderCheckRecvDebugOnce bool
-	orderSendSentDebugOnce  bool
-	orderSendRecvDebugOnce  bool
 )
 
 const (
@@ -49,22 +40,9 @@ func (c *Client) OrderSend(ctx context.Context, request TradeRequest) (*TradeRes
 	w.WriteI64(request.Position)
 	w.WriteI64(request.PositionBy)
 
-	sentParams := w.Bytes()
-	if !orderSendSentDebugOnce {
-		orderSendSentDebugOnce = true
-		log.Printf("[gomt5] OrderSend request debug: total=%d hex=%s",
-			len(sentParams), hex.EncodeToString(sentParams))
-	}
-
-	data, err := c.SendRaw(ctx, protocol.CmdOrderSend, sentParams)
+	data, err := c.SendRaw(ctx, protocol.CmdOrderSend, w.Bytes())
 	if err != nil {
 		return nil, err
-	}
-
-	if !orderSendRecvDebugOnce {
-		orderSendRecvDebugOnce = true
-		log.Printf("[gomt5] OrderSend response debug: total=%d hex=%s",
-			len(data), hex.EncodeToString(data))
 	}
 
 	if len(data) < tradeResultTotalBytes {
@@ -114,22 +92,9 @@ func (c *Client) OrderCheck(ctx context.Context, request TradeRequest) (*CheckRe
 	w.WriteI64(request.Position)
 	w.WriteI64(request.PositionBy)
 
-	sentParams := w.Bytes()
-	if !orderCheckSentDebugOnce {
-		orderCheckSentDebugOnce = true
-		log.Printf("[gomt5] OrderCheck request debug: total=%d hex=%s",
-			len(sentParams), hex.EncodeToString(sentParams))
-	}
-
-	data, err := c.SendRaw(ctx, protocol.CmdOrderCheck, sentParams)
+	data, err := c.SendRaw(ctx, protocol.CmdOrderCheck, w.Bytes())
 	if err != nil {
 		return nil, err
-	}
-
-	if !orderCheckRecvDebugOnce {
-		orderCheckRecvDebugOnce = true
-		log.Printf("[gomt5] OrderCheck response debug: total=%d hex=%s",
-			len(data), hex.EncodeToString(data))
 	}
 
 	if len(data) < checkResultTotalBytes {
