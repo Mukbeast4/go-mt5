@@ -24,7 +24,7 @@ Native Go client for MetaTrader 5. Communicates directly with the MT5 terminal v
 
 - Windows (named pipes are a Windows kernel feature)
 - MetaTrader 5 terminal running with an active account
-- Go 1.21+
+- Go 1.25+
 
 ## Installation
 
@@ -70,6 +70,21 @@ func main() {
 	fmt.Printf("EURUSD Bid: %.5f Ask: %.5f\n", tick.Bid, tick.Ask)
 }
 ```
+
+## Examples
+
+The `examples/` directory contains runnable programs covering the main use cases:
+
+| Example | What it demonstrates |
+|---------|----------------------|
+| `examples/connect` | Connect, read account / terminal info, count symbols |
+| `examples/rates` | Fetch OHLCV bars via `CopyRatesFromPos` |
+| `examples/ticks` | Fetch recent ticks via `CopyTicksFrom` |
+| `examples/stream` | Subscribe to live ticks across multiple symbols |
+| `examples/trade` | Place a market order with `tradeutil.Buy` |
+| `examples/risk` | Position sizing from balance, symbol info, and current tick |
+
+Run any example with `go run ./examples/<name>` on a Windows host with MT5 running.
 
 ## API
 
@@ -167,7 +182,7 @@ Response: [payload_len:LE32][cmd_echo:LE32][success:LE32][data...]
 | `order_calc_profit()` | `OrderCalcProfit(ctx, ...)` | Done |
 | `last_error()` | `LastError()` | Done |
 
-### go-mt5 extras (not in Python API)
+### go-mt5 extras
 
 | Feature | Method |
 |---------|--------|
@@ -181,49 +196,14 @@ Response: [payload_len:LE32][cmd_echo:LE32][success:LE32][data...]
 | Request validation | `TradeRequest.Validate()` |
 | Auto-reconnect | `WithAutoReconnect(true)` |
 
-## Changelog
-
-### v0.1.8
-
-Full `AccountInfo` decoder. v0.1.7 only populated `Login` and the four trailing string slots (`Name`, `Server`, `Currency`, `Company`); every numeric and boolean field in between stayed at its zero value, so consumers saw `Balance`, `Equity`, `Margin`, `FreeMargin`, `MarginLevel`, `Profit`, `Credit`, `CurrencyDigits`, `MarginMode`, `TradeAllowed`, etc. all read as `0`/`false`.
-
-This release decodes all 24 of those fields from the real MT5 wire layout. The middle of the `CmdAccountInfo` response is 139 bytes packed without alignment padding: 4 × `int32`, 2 × 1-byte `bool`, 2 × `int32`, 1 × 1-byte `bool`, then 14 × `float64`. Note that integers are 4 bytes (not 8) and booleans are 1 byte (not LE64) — this is build-5684 layout, verified against a live TradersWay demo account.
-
-A one-shot `[gomt5] AccountInfo debug: ...` log fires on the first call and dumps the middle bytes as hex, so future MT5 builds with a different middle length can be diagnosed quickly. It is intended to be removed in v0.1.9 once we have confirmation that the layout is stable across builds in the wild.
-
-## Upgrading from v0.1.0
-
-All public methods now require `context.Context` as the first parameter:
-
-```go
-// Before (v0.1.0)
-client, _ := gomt5.NewClient()
-info, _ := client.AccountInfo()
-positions, _ := client.PositionsGet("EURUSD")
-
-// After (v0.1.1+)
-ctx := context.Background()
-client, _ := gomt5.NewClient(ctx)
-info, _ := client.AccountInfo(ctx)
-positions, _ := client.PositionsGet(ctx, &gomt5.PositionFilter{Symbol: "EURUSD"})
-```
-
-Other breaking changes:
-- `NewClientFromConn(conn)` -> `NewClientFromConn(ctx, conn, opts...)`
-- `OrdersGet(symbol)` -> `OrdersGet(ctx, *OrderFilter)`
-- `PositionsGet(symbol)` -> `PositionsGet(ctx, *PositionFilter)`
-- `HistoryOrdersGet(from, to)` -> `HistoryOrdersGet(ctx, *HistoryFilter)`
-- `HistoryDealsGet(from, to)` -> `HistoryDealsGet(ctx, *HistoryFilter)`
-- `SendRaw(cmdID, params)` -> `SendRaw(ctx, cmdID, params)`
-
 ## Limitations
 
 - **Windows only**: Named pipes are a Windows kernel feature. The library cannot connect to MT5 from Linux or macOS (cross-compilation works, but runtime requires Windows).
-- **Reverse-engineered protocol**: The binary protocol is not documented by MetaQuotes. Command IDs and payload formats were discovered by analyzing the official Python `MetaTrader5.pyd` library. Some commands (e.g., `Login`) are not yet mapped because their IDs have not been identified in the pipe protocol.
+- **Reverse-engineered protocol**: The binary protocol is not documented by MetaQuotes. Command IDs and payload formats were discovered by analyzing the official Python `MetaTrader5.pyd` library.
 - **MT5 build compatibility**: MetaQuotes may change the pipe protocol between MT5 builds without notice. If something breaks after an MT5 update, please open an issue with your build number.
 - **Broker differences**: Different brokers configure their MT5 servers differently. Filling modes, symbol visibility, available order types, and margin calculation methods vary. Always check `SymbolInfo` before trading.
 - **Single terminal**: The library connects to one MT5 terminal instance. If multiple terminals are running, use `WithPipeName` to target a specific one.
-- **No tick streaming yet**: Real-time tick push from the pipe protocol has not been reverse-engineered. Use polling via `SymbolInfoTick` or `CopyTicksFrom` as a workaround.
+- **Tick streaming via polling**: `SubscribeTicks` works by polling `SymbolInfoTick` on an interval. True push streaming from the pipe protocol has not been reverse-engineered yet.
 
 ## Testing
 
@@ -238,11 +218,25 @@ Tests use an in-memory mock pipe, no MT5 instance needed.
 ```
 go-mt5/
 ├── *.go                     # Public API (package gomt5)
+├── analysis/                # Rate series, SMA/EMA, CSV export
+├── tradeutil/               # High-level trade helpers (Buy, Sell, Close…)
+├── examples/                # Runnable usage examples
 ├── internal/
 │   ├── protocol/            # Binary codec + message framing
 │   └── pipe/                # Windows named pipe transport
 └── .github/                 # CI workflows
 ```
+
+## Changelog
+
+### v0.1.8
+
+Full `AccountInfo` decoder. v0.1.7 only populated `Login` and the trailing string fields (`Name`, `Server`, `Currency`, `Company`); every numeric and boolean field in between (`Balance`, `Equity`, `Margin`, `FreeMargin`, `Profit`, `Credit`, etc.) read as `0`/`false`. This release decodes the full 139-byte middle of `CmdAccountInfo` against the real MT5 wire layout (4×int32, 2×bool1, 2×int32, 1×bool1, 14×float64 — no alignment padding), verified against a live build-5684 demo. A one-shot `[gomt5] AccountInfo debug: ...` hex log fires on the first call to help diagnose future build drift; it is intended to be removed in v0.1.9 once layout stability is confirmed.
+
+Other fixes:
+- `pipe.Discover()` uses native SHA-256 over `terminal64.exe` path (no external tools).
+- Deals / orders / positions string fields decoded as fixed-width slots.
+- ENUM field widths corrected across history / trading / positions decoders.
 
 ## Contributing
 
