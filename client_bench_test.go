@@ -23,6 +23,7 @@ func BenchmarkSymbolInfoTick(b *testing.B) {
 			d = writeI64(d, 0)
 			d = writeI64(d, 1710000000123)
 			d = writeU32(d, 6)
+			d = writeF64(d, 0)
 			return true, d
 		}
 		return false, nil

@@ -3,9 +3,7 @@ package gomt5
 import (
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
-	"log"
 	"math"
 
 	"github.com/mukbeast4/go-mt5/internal/protocol"
@@ -24,8 +22,6 @@ const (
 
 	accountInfoMiddleBytes = 139
 )
-
-var accountInfoDebugOnce bool
 
 func (c *Client) Login(ctx context.Context, login int64, password, server string) error {
 	w := protocol.NewWriter()
@@ -49,13 +45,6 @@ func (c *Client) AccountInfo(ctx context.Context) (*AccountInfo, error) {
 
 	stringsOffset := len(resp.Data) - accountInfoStringsTotalBytes
 	middle := resp.Data[8:stringsOffset]
-
-	if !accountInfoDebugOnce {
-		accountInfoDebugOnce = true
-		log.Printf("[gomt5] AccountInfo debug: total=%d middle=%d strings_offset=%d",
-			len(resp.Data), len(middle), stringsOffset)
-		log.Printf("[gomt5] AccountInfo middle hex: %s", hex.EncodeToString(middle))
-	}
 
 	if len(middle) < accountInfoMiddleBytes {
 		return nil, fmt.Errorf("decode account info: middle too short (%d bytes, want at least %d)", len(middle), accountInfoMiddleBytes)
