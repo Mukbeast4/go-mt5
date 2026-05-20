@@ -11,9 +11,9 @@ import (
 )
 
 // TestPositionsDecodeRealCapture decodes a real cmd PositionsGet payload
-// captured from a TradersWay demo terminal (4 EURUSD buy positions opened
-// by an EA). The capture is the wire payload only — 4-byte count header
-// followed by four 320-byte records. See issue #17.
+// captured from a demo MT5 terminal (4 EURUSD buy positions opened by an
+// EA). The capture is the wire payload only — 4-byte count header followed
+// by four 320-byte records. See issue #17.
 func TestPositionsDecodeRealCapture(t *testing.T) {
 	raw, err := os.ReadFile("testdata/positions_4buys_eurusd.bin")
 	if err != nil {
@@ -67,7 +67,7 @@ func TestPositionsDecodeRealCapture(t *testing.T) {
 		{"Commission", p0.Commission, 0.0},
 		{"Swap", p0.Swap, 0.0},
 		{"Symbol", p0.Symbol, "EURUSD"},
-		{"Comment", p0.Comment, "broker-a-algo-on"},
+		{"Comment", p0.Comment, "test-1"},
 		{"ExternalID", p0.ExternalID, ""},
 	}
 	for _, c := range checks {
@@ -89,9 +89,9 @@ func TestPositionsDecodeRealCapture(t *testing.T) {
 		comment string
 		profit  float64
 	}{
-		{1, 27822129, "a-on-2", -2.11},
-		{2, 27822794, "b2-t1", -2.01},
-		{3, 27822815, "b2-t2", -2.08},
+		{1, 27822129, "test-2", -2.11},
+		{2, 27822794, "test-3", -2.01},
+		{3, 27822815, "test-4", -2.08},
 	}
 	for _, p := range tail {
 		got := positions[p.idx]

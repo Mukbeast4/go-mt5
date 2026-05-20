@@ -235,7 +235,7 @@ go-mt5/
 
 Regression coverage: `positions_decode_test.go` decodes a real 4-position EURUSD capture (`testdata/positions_4buys_eurusd.bin`) and asserts the table against the live MT5 terminal snapshot, plus a synthetic-array test parallel to `TestSymbolsGetDecodesArray`. Closes #17.
 
-Validated end-to-end against a trd-pld dashboard on a TradersWay demo: symbols, volumes, prices, profits, and commissions all match what the MT5 terminal shows.
+Validated end-to-end against a downstream dashboard on a demo MT5 server: symbols, volumes, prices, profits, and commissions all match what the MT5 terminal shows.
 
 ### v0.1.9
 
@@ -247,7 +247,7 @@ Decoders: `CheckResult` (252 B), `TradeResult` (260 B), and the `Tick` (60 B) re
 
 Robustness: `SymbolInfoTick` surfaces an empty payload as the new `ErrNoTick` sentinel instead of `unexpected EOF`. `SubscribeTicks` silently retries on `ErrNoTick`, eliminating spurious "Subscribe X failed" lines for index CFDs on closed sessions.
 
-Validated on TradersWay-Demo: two distinct EURUSD market trades executed cleanly (deal/order tickets, comment "Request executed"), zero decode errors over multi-minute runs. The temporary `[gomt5] *Debug` diagnostic logs from earlier releases are removed.
+Validated on a demo MT5 server: two distinct EURUSD market trades executed cleanly (deal/order tickets, comment "Request executed"), zero decode errors over multi-minute runs. The temporary `[gomt5] *Debug` diagnostic logs from earlier releases are removed.
 
 For older releases, see the [GitHub releases page](https://github.com/Mukbeast4/go-mt5/releases).
 
