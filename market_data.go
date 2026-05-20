@@ -113,13 +113,14 @@ func decodeTicks(data []byte) ([]Tick, error) {
 	ticks := make([]Tick, 0, count)
 	for i := 0; i < count; i++ {
 		tick := Tick{
-			Time:    r.ReadI64(),
-			Bid:     r.ReadF64(),
-			Ask:     r.ReadF64(),
-			Last:    r.ReadF64(),
-			Volume:  r.ReadU64(),
-			TimeMsc: r.ReadI64(),
-			Flags:   r.ReadU32(),
+			Time:       r.ReadI64(),
+			Bid:        r.ReadF64(),
+			Ask:        r.ReadF64(),
+			Last:       r.ReadF64(),
+			Volume:     r.ReadU64(),
+			TimeMsc:    r.ReadI64(),
+			Flags:      r.ReadU32(),
+			VolumeReal: r.ReadF64(),
 		}
 		if r.Err() != nil {
 			return nil, fmt.Errorf("decode tick %d: %w", i, r.Err())
