@@ -123,12 +123,9 @@ func (c *Client) reconnect(ctx context.Context) {
 		c.onDisconnect(ErrDisconnected)
 	}
 
-	c.mu.Lock()
-	if c.conn != nil {
-		c.conn.Close()
-		c.conn = nil
+	if old := c.swapConn(nil); old != nil {
+		old.Close()
 	}
-	c.mu.Unlock()
 
 	delay := c.reconnectCfg.InitialDelay
 	if delay == 0 {
@@ -182,19 +179,16 @@ func (c *Client) reconnect(ctx context.Context) {
 			continue
 		}
 
-		c.mu.Lock()
-		c.conn = conn
-		c.mu.Unlock()
+		c.storeConn(conn)
 
 		w := protocol.NewWriter()
 		w.WriteU32(3)
 		w.WriteString("Go")
 		if _, err := c.send(ctx, protocol.CmdInitialize, w.Bytes()); err != nil {
 			c.logger.Debug("reinitialize: %v", err)
-			c.mu.Lock()
-			c.conn.Close()
-			c.conn = nil
-			c.mu.Unlock()
+			if old := c.swapConn(nil); old != nil {
+				old.Close()
+			}
 			time.Sleep(delay)
 			delay = min(delay*2, maxDelay)
 			continue

@@ -5,11 +5,16 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/mukbeast4/go-mt5/internal/pipe"
 	"github.com/mukbeast4/go-mt5/internal/protocol"
 )
+
+type connBox struct {
+	conn io.ReadWriteCloser
+}
 
 type Option func(*options)
 
@@ -35,7 +40,7 @@ func WithTimeout(d time.Duration) Option {
 }
 
 type Client struct {
-	conn              io.ReadWriteCloser
+	conn              atomic.Pointer[connBox]
 	mu                sync.Mutex
 	build             int
 	lastError         error
@@ -47,12 +52,41 @@ type Client struct {
 	onReconnect       ReconnectHook
 	heartbeatInterval time.Duration
 	stopCh            chan struct{}
+	stopOnce          sync.Once
 	pipeName          string
 	pipeTimeout       time.Duration
 	subMu             sync.Mutex
 	subs              map[string]*tickSub
 	tickBufferSize    int
 	tickPollInterval  time.Duration
+}
+
+func (c *Client) loadConn() io.ReadWriteCloser {
+	b := c.conn.Load()
+	if b == nil {
+		return nil
+	}
+	return b.conn
+}
+
+func (c *Client) storeConn(conn io.ReadWriteCloser) {
+	if conn == nil {
+		c.conn.Store(nil)
+		return
+	}
+	c.conn.Store(&connBox{conn: conn})
+}
+
+func (c *Client) swapConn(conn io.ReadWriteCloser) io.ReadWriteCloser {
+	var b *connBox
+	if conn != nil {
+		b = &connBox{conn: conn}
+	}
+	old := c.conn.Swap(b)
+	if old == nil {
+		return nil
+	}
+	return old.conn
 }
 
 func NewClient(ctx context.Context, opts ...Option) (*Client, error) {
@@ -110,8 +144,7 @@ func NewClientFromConn(ctx context.Context, conn io.ReadWriteCloser, opts ...Opt
 }
 
 func newClientFromOptions(conn io.ReadWriteCloser, pipeName string, o *options) *Client {
-	return &Client{
-		conn:              conn,
+	c := &Client{
 		logger:            o.logger,
 		onRequest:         o.onRequest,
 		reconnectCfg:      o.reconnect,
@@ -124,18 +157,13 @@ func newClientFromOptions(conn io.ReadWriteCloser, pipeName string, o *options) 
 		tickBufferSize:    o.tickBufferSize,
 		tickPollInterval:  o.tickPollInterval,
 	}
+	c.storeConn(conn)
+	return c
 }
 
 func (c *Client) Close() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	if c.stopCh != nil {
-		select {
-		case <-c.stopCh:
-		default:
-			close(c.stopCh)
-		}
+		c.stopOnce.Do(func() { close(c.stopCh) })
 	}
 
 	c.subMu.Lock()
@@ -145,12 +173,15 @@ func (c *Client) Close() error {
 	}
 	c.subMu.Unlock()
 
-	if c.conn == nil {
-		return nil
+	conn := c.swapConn(nil)
+	var err error
+	if conn != nil {
+		err = conn.Close()
 	}
-	err := c.conn.Close()
-	c.conn = nil
+
+	c.mu.Lock()
 	c.setState(StateDisconnected)
+	c.mu.Unlock()
 	return err
 }
 
@@ -186,7 +217,8 @@ func (c *Client) send(ctx context.Context, cmdID uint32, params []byte) (*protoc
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.conn == nil {
+	conn := c.loadConn()
+	if conn == nil {
 		return nil, ErrNotConnected
 	}
 
@@ -196,7 +228,7 @@ func (c *Client) send(ctx context.Context, cmdID uint32, params []byte) (*protoc
 
 	start := time.Now()
 
-	if err := protocol.WriteRequest(c.conn, cmdID, params); err != nil {
+	if err := protocol.WriteRequest(conn, cmdID, params); err != nil {
 		c.lastError = err
 		c.logger.Debug("send cmd=%d error=%v", cmdID, err)
 		if c.onRequest != nil {
@@ -205,7 +237,7 @@ func (c *Client) send(ctx context.Context, cmdID uint32, params []byte) (*protoc
 		return nil, fmt.Errorf("send cmd %d: %w", cmdID, err)
 	}
 
-	resp, err := protocol.ReadResponse(c.conn)
+	resp, err := protocol.ReadResponse(conn)
 	duration := time.Since(start)
 	if err != nil {
 		c.lastError = err
@@ -243,6 +275,12 @@ func (c *Client) send(ctx context.Context, cmdID uint32, params []byte) (*protoc
 	return resp, nil
 }
 
+// SendRaw issues a raw command and returns the response payload bytes.
+//
+// The returned slice is owned by the caller for its full lifetime: it is not
+// pooled, recycled, or aliased by the client. Callers may retain or mutate it
+// freely. This contract is part of the public API — any future allocation
+// optimization in the protocol layer must preserve this ownership semantics.
 func (c *Client) SendRaw(ctx context.Context, cmdID uint32, params []byte) ([]byte, error) {
 	resp, err := c.send(ctx, cmdID, params)
 	if err != nil {
