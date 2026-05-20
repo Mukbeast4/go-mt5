@@ -195,6 +195,10 @@ func (r *Reader) ReadString() string {
 	if r.err != nil {
 		return ""
 	}
+	if charCount > maxPayloadSize/2 {
+		r.err = fmt.Errorf("ReadString: charCount %d exceeds limit", charCount)
+		return ""
+	}
 	byteCount := int(charCount) * 2
 	if r.pos+byteCount > len(r.data) {
 		r.err = io.ErrUnexpectedEOF
