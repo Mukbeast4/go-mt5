@@ -37,13 +37,12 @@ func (c *Client) SymbolsGet(ctx context.Context, group string) ([]SymbolInfo, er
 	r := protocol.NewReader(data)
 	count := int(r.ReadU32())
 
-	symbols := make([]SymbolInfo, 0, count)
+	symbols := make([]SymbolInfo, count)
 	for i := 0; i < count; i++ {
-		sym := decodeSymbolInfo(r)
+		decodeSymbolInfo(r, &symbols[i])
 		if r.Err() != nil {
 			return nil, fmt.Errorf("decode symbol %d: %w", i, r.Err())
 		}
-		symbols = append(symbols, *sym)
 	}
 	return symbols, nil
 }
@@ -58,7 +57,8 @@ func (c *Client) SymbolInfo(ctx context.Context, symbol string) (*SymbolInfo, er
 	}
 
 	r := protocol.NewReader(resp.Data)
-	info := decodeSymbolInfo(r)
+	info := &SymbolInfo{}
+	decodeSymbolInfo(r, info)
 	if r.Err() != nil {
 		return nil, fmt.Errorf("decode symbol info: %w", r.Err())
 	}
@@ -138,93 +138,91 @@ const (
 	_ uint = 2432 - symbolInfoStringRegionBytes
 )
 
-func decodeSymbolInfo(r *protocol.Reader) *SymbolInfo {
-	info := &SymbolInfo{
-		Custom:             r.ReadBool1(),
-		ChartMode:          int64(r.ReadU32()),
-		Select:             r.ReadBool1(),
-		Visible:            r.ReadBool1(),
-		SessionDeals:       r.ReadI64(),
-		SessionBuyOrders:   r.ReadI64(),
-		SessionSellOrders:  r.ReadI64(),
-		Volume:             r.ReadI64(),
-		VolumeHigh:         r.ReadI64(),
-		VolumeLow:          r.ReadI64(),
-		Time:               r.ReadI64(),
-		Digits:             int64(r.ReadU32()),
-		Spread:             int64(r.ReadU32()),
-		SpreadFloat:        r.ReadBool1(),
-		TicksBookDepth:     int64(r.ReadU32()),
-		TradeCalcMode:      int64(r.ReadU32()),
-		TradeMode:          int64(r.ReadU32()),
-		StartTime:          r.ReadI64(),
-		ExpirationTime:     r.ReadI64(),
-		TradeStopsLevel:    int64(r.ReadU32()),
-		TradeFreezeLevel:   int64(r.ReadU32()),
-		TradeExeMode:       int64(r.ReadU32()),
-		SwapMode:           int64(r.ReadU32()),
-		SwapRollover3Days:  int64(r.ReadU32()),
-		MarginHedgedUseLeg: r.ReadBool1(),
-		ExpirationMode:     int64(r.ReadU32()),
-		FillingMode:        int64(r.ReadU32()),
-		OrderMode:          int64(r.ReadU32()),
-		OrderGTCMode:       int64(r.ReadU32()),
-		OptionMode:         int64(r.ReadU32()),
-		OptionRight:        int64(r.ReadU32()),
+func decodeSymbolInfo(r *protocol.Reader, info *SymbolInfo) {
+	info.Custom = r.ReadBool1()
+	info.ChartMode = int64(r.ReadU32())
+	info.Select = r.ReadBool1()
+	info.Visible = r.ReadBool1()
+	info.SessionDeals = r.ReadI64()
+	info.SessionBuyOrders = r.ReadI64()
+	info.SessionSellOrders = r.ReadI64()
+	info.Volume = r.ReadI64()
+	info.VolumeHigh = r.ReadI64()
+	info.VolumeLow = r.ReadI64()
+	info.Time = r.ReadI64()
+	info.Digits = int64(r.ReadU32())
+	info.Spread = int64(r.ReadU32())
+	info.SpreadFloat = r.ReadBool1()
+	info.TicksBookDepth = int64(r.ReadU32())
+	info.TradeCalcMode = int64(r.ReadU32())
+	info.TradeMode = int64(r.ReadU32())
+	info.StartTime = r.ReadI64()
+	info.ExpirationTime = r.ReadI64()
+	info.TradeStopsLevel = int64(r.ReadU32())
+	info.TradeFreezeLevel = int64(r.ReadU32())
+	info.TradeExeMode = int64(r.ReadU32())
+	info.SwapMode = int64(r.ReadU32())
+	info.SwapRollover3Days = int64(r.ReadU32())
+	info.MarginHedgedUseLeg = r.ReadBool1()
+	info.ExpirationMode = int64(r.ReadU32())
+	info.FillingMode = int64(r.ReadU32())
+	info.OrderMode = int64(r.ReadU32())
+	info.OrderGTCMode = int64(r.ReadU32())
+	info.OptionMode = int64(r.ReadU32())
+	info.OptionRight = int64(r.ReadU32())
 
-		Bid:                     r.ReadF64(),
-		BidHigh:                 r.ReadF64(),
-		BidLow:                  r.ReadF64(),
-		Ask:                     r.ReadF64(),
-		AskHigh:                 r.ReadF64(),
-		AskLow:                  r.ReadF64(),
-		Last:                    r.ReadF64(),
-		LastHigh:                r.ReadF64(),
-		LastLow:                 r.ReadF64(),
-		VolumeReal:              r.ReadF64(),
-		VolumeHighReal:          r.ReadF64(),
-		VolumeLowReal:           r.ReadF64(),
-		OptionStrike:            r.ReadF64(),
-		Point:                   r.ReadF64(),
-		TradeTickValue:          r.ReadF64(),
-		TradeTickValueProfit:    r.ReadF64(),
-		TradeTickValueLoss:      r.ReadF64(),
-		TradeTickSize:           r.ReadF64(),
-		TradeContractSize:       r.ReadF64(),
-		TradeAccruedInterest:    r.ReadF64(),
-		TradeFaceValue:          r.ReadF64(),
-		TradeLiquidityRate:      r.ReadF64(),
-		VolumeMin:               r.ReadF64(),
-		VolumeMax:               r.ReadF64(),
-		VolumeStep:              r.ReadF64(),
-		VolumeLimit:             r.ReadF64(),
-		SwapLong:                r.ReadF64(),
-		SwapShort:               r.ReadF64(),
-		MarginInitial:           r.ReadF64(),
-		MarginMaintenance:       r.ReadF64(),
-		SessionVolume:           r.ReadF64(),
-		SessionTurnover:         r.ReadF64(),
-		SessionInterest:         r.ReadF64(),
-		SessionBuyOrdersVolume:  r.ReadF64(),
-		SessionSellOrdersVolume: r.ReadF64(),
-		SessionOpen:             r.ReadF64(),
-		SessionClose:            r.ReadF64(),
-		SessionAW:               r.ReadF64(),
-		SessionPriceSettlement:  r.ReadF64(),
-		SessionPriceLimitMin:    r.ReadF64(),
-		SessionPriceLimitMax:    r.ReadF64(),
-		MarginHedged:            r.ReadF64(),
-		PriceChange:             r.ReadF64(),
-		PriceVolatility:         r.ReadF64(),
-		PriceTheoretical:        r.ReadF64(),
-		PriceGreeksDelta:        r.ReadF64(),
-		PriceGreeksTheta:        r.ReadF64(),
-		PriceGreeksGamma:        r.ReadF64(),
-		PriceGreeksVega:         r.ReadF64(),
-		PriceGreeksRho:          r.ReadF64(),
-		PriceGreeksOmega:        r.ReadF64(),
-		PriceSensitivity:        r.ReadF64(),
-	}
+	info.Bid = r.ReadF64()
+	info.BidHigh = r.ReadF64()
+	info.BidLow = r.ReadF64()
+	info.Ask = r.ReadF64()
+	info.AskHigh = r.ReadF64()
+	info.AskLow = r.ReadF64()
+	info.Last = r.ReadF64()
+	info.LastHigh = r.ReadF64()
+	info.LastLow = r.ReadF64()
+	info.VolumeReal = r.ReadF64()
+	info.VolumeHighReal = r.ReadF64()
+	info.VolumeLowReal = r.ReadF64()
+	info.OptionStrike = r.ReadF64()
+	info.Point = r.ReadF64()
+	info.TradeTickValue = r.ReadF64()
+	info.TradeTickValueProfit = r.ReadF64()
+	info.TradeTickValueLoss = r.ReadF64()
+	info.TradeTickSize = r.ReadF64()
+	info.TradeContractSize = r.ReadF64()
+	info.TradeAccruedInterest = r.ReadF64()
+	info.TradeFaceValue = r.ReadF64()
+	info.TradeLiquidityRate = r.ReadF64()
+	info.VolumeMin = r.ReadF64()
+	info.VolumeMax = r.ReadF64()
+	info.VolumeStep = r.ReadF64()
+	info.VolumeLimit = r.ReadF64()
+	info.SwapLong = r.ReadF64()
+	info.SwapShort = r.ReadF64()
+	info.MarginInitial = r.ReadF64()
+	info.MarginMaintenance = r.ReadF64()
+	info.SessionVolume = r.ReadF64()
+	info.SessionTurnover = r.ReadF64()
+	info.SessionInterest = r.ReadF64()
+	info.SessionBuyOrdersVolume = r.ReadF64()
+	info.SessionSellOrdersVolume = r.ReadF64()
+	info.SessionOpen = r.ReadF64()
+	info.SessionClose = r.ReadF64()
+	info.SessionAW = r.ReadF64()
+	info.SessionPriceSettlement = r.ReadF64()
+	info.SessionPriceLimitMin = r.ReadF64()
+	info.SessionPriceLimitMax = r.ReadF64()
+	info.MarginHedged = r.ReadF64()
+	info.PriceChange = r.ReadF64()
+	info.PriceVolatility = r.ReadF64()
+	info.PriceTheoretical = r.ReadF64()
+	info.PriceGreeksDelta = r.ReadF64()
+	info.PriceGreeksTheta = r.ReadF64()
+	info.PriceGreeksGamma = r.ReadF64()
+	info.PriceGreeksVega = r.ReadF64()
+	info.PriceGreeksRho = r.ReadF64()
+	info.PriceGreeksOmega = r.ReadF64()
+	info.PriceSensitivity = r.ReadF64()
 
 	info.Basis = r.ReadFixedString(slotBasis)
 	info.Category = r.ReadFixedString(slotCategory)
@@ -239,8 +237,6 @@ func decodeSymbolInfo(r *protocol.Reader) *SymbolInfo {
 	info.Page = r.ReadFixedString(slotPage)
 	info.Path = r.ReadFixedString(slotPath)
 	info.SymbolName = r.ReadFixedString(slotSymbolName)
-
-	return info
 }
 
 func decodeTick(r *protocol.Reader) *Tick {
