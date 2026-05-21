@@ -93,6 +93,29 @@ func TestReaderOverflow(t *testing.T) {
 	}
 }
 
+func TestReadStringHugeCharCountRejected(t *testing.T) {
+	data := make([]byte, 4)
+	binary.LittleEndian.PutUint32(data, 0x80000001)
+	r := protocol.NewReader(data)
+	s := r.ReadString()
+	if r.Err() == nil {
+		t.Fatal("expected error for oversized charCount, got nil")
+	}
+	if s != "" {
+		t.Errorf("expected empty string on error, got %q", s)
+	}
+}
+
+func TestReadStringMaxCharCountRejected(t *testing.T) {
+	data := make([]byte, 4)
+	binary.LittleEndian.PutUint32(data, 0xFFFFFFFF)
+	r := protocol.NewReader(data)
+	r.ReadString()
+	if r.Err() == nil {
+		t.Fatal("expected error for max uint32 charCount, got nil")
+	}
+}
+
 func TestInitHandshake(t *testing.T) {
 	w := protocol.NewWriter()
 	w.WriteU32(3)
