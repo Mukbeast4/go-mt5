@@ -229,25 +229,27 @@ go-mt5/
 
 ## Changelog
 
-### v0.1.10
+### v0.1.11
 
-`PositionsGet` decoder corrected against the live MT5 wire layout. The previous implementation rotated `PriceSL`, `PriceTP`, and `PriceCurrent` and skipped the `Commission` F64, so each record was misread by 8 bytes from offset 80 onward — symbols came back as CJK glyphs, current prices and profits were garbage. Fix moves SL/TP/Current into wire order, inserts `Commission` between `PriceCurrent` and `Swap`, and adds `Commission float64` to the `Position` struct.
+Correctness, security hardening, observability, and a measurable perf win on the largest decoder. Five PRs (#22, #23, #25, #27, #28). All fixes validated against a live MT5 build 5836 demo terminal running in production alongside the existing feeder.
 
-Regression coverage: `positions_decode_test.go` decodes a real 4-position EURUSD capture (`testdata/positions_4buys_eurusd.bin`) and asserts the table against the live MT5 terminal snapshot, plus a synthetic-array test parallel to `TestSymbolsGetDecodesArray`. Closes #17.
+**Tick array decoder fixed.** `CopyTicksFrom` and `CopyTicksRange` (cmd 104/105) were reading 52-byte tick records when MT5 actually writes 60 bytes per tick — the trailing `VolumeReal` field was silently dropped, causing every tick after the first to read shifted/garbage data (bid/ask values like `1e+260`, negative `Time`). `decodeTicks` now reads `VolumeReal`. The bug was invisible until a real 100-tick capture was decoded against the existing code; the new `testdata/ticks_100_eurusd.bin` fixture pins the regression.
 
-Validated end-to-end against a downstream dashboard on a demo MT5 server: symbols, volumes, prices, profits, and commissions all match what the MT5 terminal shows.
+**`Close()` no longer deadlocks with an in-flight RPC.** Previously, `Close` acquired `c.mu` before calling `conn.Close()`. If a polling goroutine was blocked in `ReadResponse` (holding `c.mu`), `Close` could not acquire the lock, the connection was never closed, and the in-flight read never aborted — full deadlock. The connection pointer now lives behind `atomic.Pointer[connBox]`; `Close` swaps it out and closes the underlying conn without holding `c.mu`, which aborts any in-flight read and lets the holding RPC release the lock. Prod-validated: `Close()` returned in **886.5µs** during an active `SubscribeTicks` session in the live Wine pod.
 
-### v0.1.9
+**`ReadString` 32-bit overflow guarded.** On `GOARCH=386`, an attacker-controlled `charCount > 0x7FFFFFFF` would wrap when multiplied by 2, bypassing the subsequent bounds check. A hard cap at `maxPayloadSize/2` is applied before the multiplication. Defense-in-depth (the 64 MB payload cap already mitigated this in practice, but the wraparound was a real path).
 
-Trade pipeline end-to-end against a real MT5 demo. v0.1.8 only fixed `AccountInfo`; this release closes the same class of bug across the trade RPCs.
+**`SymbolsGet` is meaningfully cheaper.** `decodeSymbolInfo` now writes in-place into a pre-allocated `[]SymbolInfo` slot rather than returning a `*SymbolInfo` literal that escaped to the heap. On a 959-symbol response (live broker payload): **-2.77% time**, **-8.78% memory**, **-4.35% allocations** (benchstat, n=10). The single per-symbol heap allocation per record is eliminated; struct content still lives in the slice. Byte-identical decode confirmed against the captured fixture.
 
-Encoder: `OrderCheck` and `OrderSend` now serialize `MqlTradeRequest` as the 232-byte packed C struct the Python bridge memcpy-deserializes — UTF-16LE fixed slots for `Symbol` and `Comment`, `Deviation` as `ulong` (u64). The previous length-prefixed encoding killed the Wine pipe before any response could be framed.
+**Decoder regression coverage.** Five new real-wire fixtures captured from MT5 build 5836 — `account_info.bin`, `rates_h1_50_eurusd.bin`, `ticks_100_eurusd.bin`, `history_deals_30d.bin`, `symbols_all.bin` (959 symbols, 2.8 MB) — back six new decoder tests. `AccountInfo` is now fixture-covered for the first time (the v0.1.10 offset regression had no fixture).
 
-Decoders: `CheckResult` (252 B), `TradeResult` (260 B), and the `Tick` (60 B) response now decode against the real packed wire layout at fixed offsets, with the trailing comment read as a 200-byte UTF-16LE fixed slot. `Tick` gains `VolumeReal` (8-byte tail present since build 5684).
+**Stress + fuzz.** Two concurrency tests under `-race`: 32 goroutines × 200 mixed RPCs (6,400 ops, zero races, zero non-fatal errors), and a pipe-close-mid-stream test that exits workers cleanly within 5s. Three Go native fuzz targets on the protocol decode surface (`Reader.ReadString`, `Reader.ReadFixedString`, `ReadResponse`) with seed corpus; locally ran ~8M random executions across all targets with no crashes.
 
-Robustness: `SymbolInfoTick` surfaces an empty payload as the new `ErrNoTick` sentinel instead of `unexpected EOF`. `SubscribeTicks` silently retries on `ErrNoTick`, eliminating spurious "Subscribe X failed" lines for index CFDs on closed sessions.
+**Realistic-scale benchmarks.** `BenchmarkSymbolsGet_959Symbols`, `BenchmarkHistoryDealsGet_242Deals`, `BenchmarkCopyTicksFrom_100Ticks`, `BenchmarkCopyRatesFromPos_50Bars`, `BenchmarkAccountInfo_RealFixture`, `BenchmarkSymbolInfoTick_UnderContention` — all using the new fixtures. These establish a public baseline for the upcoming `bufio.Reader` and `Reader` scratch-buffer work.
 
-Validated on a demo MT5 server: two distinct EURUSD market trades executed cleanly (deal/order tickets, comment "Request executed"), zero decode errors over multi-minute runs. The temporary `[gomt5] *Debug` diagnostic logs from earlier releases are removed.
+**`cmd/capture` tool added.** Standalone Go binary (cross-compile `windows/amd64`) that dumps raw `resp.Data` payloads to `.bin` files. Used in the Wine container alongside the live feeder to refresh `testdata/` when MT5 ships a new protocol build.
+
+**`SendRaw` payload ownership pinned.** Godoc now states explicitly that the returned `[]byte` is caller-owned and never pooled, closing the door on future allocation work that would alias it.
 
 For older releases, see the [GitHub releases page](https://github.com/Mukbeast4/go-mt5/releases).
 
