@@ -66,12 +66,12 @@ func TestConcurrentRPCsRaceFree(t *testing.T) {
 	var errCount atomic.Int64
 	var okCount atomic.Int64
 
-	for w := 0; w < workers; w++ {
+	for w := range workers {
 		wg.Add(1)
 		go func(seed int64) {
 			defer wg.Done()
 			r := rand.New(rand.NewSource(seed))
-			for i := 0; i < opsPerWorker; i++ {
+			for i := range opsPerWorker {
 				if ctx.Err() != nil {
 					return
 				}
@@ -157,10 +157,8 @@ func TestConcurrentRPCsSurviveMidStreamClose(t *testing.T) {
 	var fatalRaces atomic.Int64
 
 	startBarrier := make(chan struct{})
-	for w := 0; w < workers; w++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range workers {
+		wg.Go(func() {
 			<-startBarrier
 			for ctx.Err() == nil {
 				_, err := client.SymbolsTotal(ctx)
@@ -173,7 +171,7 @@ func TestConcurrentRPCsSurviveMidStreamClose(t *testing.T) {
 					return
 				}
 			}
-		}()
+		})
 	}
 
 	close(startBarrier)

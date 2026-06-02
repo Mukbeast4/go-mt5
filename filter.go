@@ -6,8 +6,8 @@ func matchGroup(symbol, group string) bool {
 	if group == "" {
 		return true
 	}
-	if strings.HasSuffix(group, "*") {
-		prefix := strings.TrimSuffix(group, "*")
+	if before, ok := strings.CutSuffix(group, "*"); ok {
+		prefix := before
 		return strings.HasPrefix(symbol, prefix)
 	}
 	return symbol == group

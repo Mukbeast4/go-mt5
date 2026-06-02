@@ -24,7 +24,7 @@ Native Go client for MetaTrader 5. Communicates directly with the MT5 terminal v
 
 - Windows (named pipes are a Windows kernel feature)
 - MetaTrader 5 terminal running with an active account
-- Go 1.25+
+- Go 1.26+
 
 ## Installation
 

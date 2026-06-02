@@ -28,7 +28,7 @@ func (c *Client) MarketBookGet(ctx context.Context, symbol string) ([]BookEntry,
 	count := int(r.ReadU32())
 
 	entries := make([]BookEntry, 0, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		entry := BookEntry{
 			Type:       BookType(r.ReadI64()),
 			Price:      r.ReadF64(),
