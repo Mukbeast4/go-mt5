@@ -24,7 +24,7 @@ Native Go client for MetaTrader 5. Communicates directly with the MT5 terminal v
 
 - Windows (named pipes are a Windows kernel feature)
 - MetaTrader 5 terminal running with an active account
-- Go 1.25+
+- Go 1.26+
 
 ## Installation
 
@@ -229,27 +229,15 @@ go-mt5/
 
 ## Changelog
 
-### v0.1.11
+### v0.1.12
 
-Correctness, security hardening, observability, and a measurable perf win on the largest decoder. Five PRs (#22, #23, #25, #27, #28). All fixes validated against a live MT5 build 5836 demo terminal running in production alongside the existing feeder.
+Go 1.26 modernization. Iso-behavior toolchain bump — no API or wire-format changes.
 
-**Tick array decoder fixed.** `CopyTicksFrom` and `CopyTicksRange` (cmd 104/105) were reading 52-byte tick records when MT5 actually writes 60 bytes per tick — the trailing `VolumeReal` field was silently dropped, causing every tick after the first to read shifted/garbage data (bid/ask values like `1e+260`, negative `Time`). `decodeTicks` now reads `VolumeReal`. The bug was invisible until a real 100-tick capture was decoded against the existing code; the new `testdata/ticks_100_eurusd.bin` fixture pins the regression.
+**Toolchain moved to Go 1.26.** `go.mod`, CI, and the documented minimum are now Go 1.26 (minor-only `go 1.26` directive, so consumers are not forced to auto-download an exact patch toolchain via `GOTOOLCHAIN`). Recompiling on the 1.26 runtime picks up the Green Tea GC: ~5% geomean improvement on the binary-decode hot paths, several of them sharply faster — `ProtocolRoundtrip` -14.58%, `SymbolInfoTick` -13.30%, `AccountInfo` -11.90%, `CopyRatesFromPos` -10.47% (benchstat 1.25.6 vs 1.26.3, same source, n=10, Apple M4 Pro). One outlier: the 959-symbol `SymbolsGet` path measured +6.84%, near the run-to-run noise floor. Memory and allocation counts are unchanged.
 
-**`Close()` no longer deadlocks with an in-flight RPC.** Previously, `Close` acquired `c.mu` before calling `conn.Close()`. If a polling goroutine was blocked in `ReadResponse` (holding `c.mu`), `Close` could not acquire the lock, the connection was never closed, and the in-flight read never aborted — full deadlock. The connection pointer now lives behind `atomic.Pointer[connBox]`; `Close` swaps it out and closes the underlying conn without holding `c.mu`, which aborts any in-flight read and lets the holding RPC release the lock. Prod-validated: `Close()` returned in **886.5µs** during an active `SubscribeTicks` session in the live Wine pod.
+**`go fix` modernizers applied.** C-style index loops rewritten to `for i := range n` across the rate/tick/deal/position/order/symbol/book decoders and the EMA helper, `strings.CutSuffix` in the symbol-group filter, and `sync.WaitGroup.Go` in the concurrency tests. No behavior change; `go build`, `go vet`, `go test -race -cover`, `gofmt -s -l`, and `GOOS=windows` build/vet all stay green.
 
-**`ReadString` 32-bit overflow guarded.** On `GOARCH=386`, an attacker-controlled `charCount > 0x7FFFFFFF` would wrap when multiplied by 2, bypassing the subsequent bounds check. A hard cap at `maxPayloadSize/2` is applied before the multiplication. Defense-in-depth (the 64 MB payload cap already mitigated this in practice, but the wraparound was a real path).
-
-**`SymbolsGet` is meaningfully cheaper.** `decodeSymbolInfo` now writes in-place into a pre-allocated `[]SymbolInfo` slot rather than returning a `*SymbolInfo` literal that escaped to the heap. On a 959-symbol response (live broker payload): **-2.77% time**, **-8.78% memory**, **-4.35% allocations** (benchstat, n=10). The single per-symbol heap allocation per record is eliminated; struct content still lives in the slice. Byte-identical decode confirmed against the captured fixture.
-
-**Decoder regression coverage.** Five new real-wire fixtures captured from MT5 build 5836 — `account_info.bin`, `rates_h1_50_eurusd.bin`, `ticks_100_eurusd.bin`, `history_deals_30d.bin`, `symbols_all.bin` (959 symbols, 2.8 MB) — back six new decoder tests. `AccountInfo` is now fixture-covered for the first time (the v0.1.10 offset regression had no fixture).
-
-**Stress + fuzz.** Two concurrency tests under `-race`: 32 goroutines × 200 mixed RPCs (6,400 ops, zero races, zero non-fatal errors), and a pipe-close-mid-stream test that exits workers cleanly within 5s. Three Go native fuzz targets on the protocol decode surface (`Reader.ReadString`, `Reader.ReadFixedString`, `ReadResponse`) with seed corpus; locally ran ~8M random executions across all targets with no crashes.
-
-**Realistic-scale benchmarks.** `BenchmarkSymbolsGet_959Symbols`, `BenchmarkHistoryDealsGet_242Deals`, `BenchmarkCopyTicksFrom_100Ticks`, `BenchmarkCopyRatesFromPos_50Bars`, `BenchmarkAccountInfo_RealFixture`, `BenchmarkSymbolInfoTick_UnderContention` — all using the new fixtures. These establish a public baseline for the upcoming `bufio.Reader` and `Reader` scratch-buffer work.
-
-**`cmd/capture` tool added.** Standalone Go binary (cross-compile `windows/amd64`) that dumps raw `resp.Data` payloads to `.bin` files. Used in the Wine container alongside the live feeder to refresh `testdata/` when MT5 ships a new protocol build.
-
-**`SendRaw` payload ownership pinned.** Godoc now states explicitly that the returned `[]byte` is caller-owned and never pooled, closing the door on future allocation work that would alias it.
+The flagship 1.26 security features (post-quantum TLS, crypto ignoring a supplied RNG) do not apply here — this is a named-pipe client with no TLS, no `net/http`, and only `crypto/sha256`. The security benefit is limited to the automatic toolchain hardening (heap randomization).
 
 For older releases, see the [GitHub releases page](https://github.com/Mukbeast4/go-mt5/releases).
 

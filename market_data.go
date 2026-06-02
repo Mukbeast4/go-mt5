@@ -87,7 +87,7 @@ func decodeRates(data []byte) ([]Rate, error) {
 	count := int(r.ReadU32())
 
 	rates := make([]Rate, 0, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		rate := Rate{
 			Time:       r.ReadI64(),
 			Open:       r.ReadF64(),
@@ -111,7 +111,7 @@ func decodeTicks(data []byte) ([]Tick, error) {
 	count := int(r.ReadU32())
 
 	ticks := make([]Tick, 0, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		tick := Tick{
 			Time:       r.ReadI64(),
 			Bid:        r.ReadF64(),

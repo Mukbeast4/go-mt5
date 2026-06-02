@@ -38,7 +38,7 @@ func (c *Client) SymbolsGet(ctx context.Context, group string) ([]SymbolInfo, er
 	count := int(r.ReadU32())
 
 	symbols := make([]SymbolInfo, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		decodeSymbolInfo(r, &symbols[i])
 		if r.Err() != nil {
 			return nil, fmt.Errorf("decode symbol %d: %w", i, r.Err())

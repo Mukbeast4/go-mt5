@@ -126,7 +126,7 @@ func decodeDeals(data []byte) ([]Deal, error) {
 	count := int(r.ReadU32())
 
 	deals := make([]Deal, 0, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		deal := Deal{
 			Ticket:     r.ReadI64(),
 			Order:      r.ReadI64(),

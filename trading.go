@@ -215,7 +215,7 @@ func decodeOrders(data []byte) ([]Order, error) {
 	count := int(r.ReadU32())
 
 	orders := make([]Order, 0, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		order := Order{
 			Ticket:         r.ReadI64(),
 			TimeSetup:      r.ReadI64(),

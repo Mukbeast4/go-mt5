@@ -28,7 +28,7 @@ func EMA(data []float64, period int) []float64 {
 	multiplier := 2.0 / float64(period+1)
 
 	sum := 0.0
-	for i := 0; i < period; i++ {
+	for i := range period {
 		sum += data[i]
 	}
 	result[period-1] = sum / float64(period)

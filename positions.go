@@ -59,7 +59,7 @@ func decodePositions(data []byte) ([]Position, error) {
 	count := int(r.ReadU32())
 
 	positions := make([]Position, 0, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		pos := Position{
 			Ticket:        r.ReadI64(),
 			Time:          r.ReadI64(),

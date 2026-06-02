@@ -54,7 +54,7 @@ func BenchmarkCopyRatesFromPos(b *testing.B) {
 		if cmdID == protocol.CmdCopyRatesFromPos {
 			var d []byte
 			d = writeU32(d, 10)
-			for i := 0; i < 10; i++ {
+			for i := range 10 {
 				d = writeI64(d, int64(1710000000+i*3600))
 				d = writeF64(d, 1.0850)
 				d = writeF64(d, 1.0860)
@@ -90,7 +90,7 @@ func BenchmarkDecodePositions(b *testing.B) {
 
 	var posData []byte
 	posData = writeU32(posData, 5)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		posData = append(posData, mockPosition(int64(100+i), "EURUSD")...)
 	}
 
