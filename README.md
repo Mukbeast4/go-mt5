@@ -244,15 +244,15 @@ go-mt5/
 
 ## Changelog
 
-### v0.1.12
+### v0.1.13
 
-Go 1.26 modernization. Iso-behavior toolchain bump — no API or wire-format changes.
+Bulk quote polling, broker-clock time semantics, and tick-stream lifecycle fixes. Additive — no breaking API changes.
 
-**Toolchain moved to Go 1.26.** `go.mod`, CI, and the documented minimum are now Go 1.26 (minor-only `go 1.26` directive, so consumers are not forced to auto-download an exact patch toolchain via `GOTOOLCHAIN`). Recompiling on the 1.26 runtime picks up the Green Tea GC: ~5% geomean improvement on the binary-decode hot paths, several of them sharply faster — `ProtocolRoundtrip` -14.58%, `SymbolInfoTick` -13.30%, `AccountInfo` -11.90%, `CopyRatesFromPos` -10.47% (benchstat 1.25.6 vs 1.26.3, same source, n=10, Apple M4 Pro). One outlier: the 959-symbol `SymbolsGet` path measured +6.84%, near the run-to-run noise floor. Memory and allocation counts are unchanged.
+**`PollQuotes` / `PollQuotesWithErrors` (#31, #33).** Polls a whole symbol list with one `SymbolsGet` group RPC per interval instead of one goroutine per symbol: 93 symbols via `SubscribeTicks` demand ~930 RPC/s on the single pipe and starve every other call site, while `PollQuotes` covers the same fleet at 1 RPC per interval. Emits one `map[string]Tick` per poll containing only the symbols whose Bid/Ask/Last changed (the first map is a full snapshot); cap-1 channel with lossless coalescing for slow consumers; fail-fast on unknown, unselected, or group-syntax-unsafe symbol names; `Client.Close()` terminates running polls. Validated against a production terminal (build 5836): 30 symbols, 60s soak, exactly 1.00 RPC/s, full 30/30 snapshot, bids identical to `SymbolInfoTick`. Ships with `SymbolInfo.Tick()` and `examples/quotes`.
 
-**`go fix` modernizers applied.** C-style index loops rewritten to `for i := range n` across the rate/tick/deal/position/order/symbol/book decoders and the EMA helper, `strings.CutSuffix` in the symbol-group filter, and `sync.WaitGroup.Go` in the concurrency tests. No behavior change; `go build`, `go vet`, `go test -race -cover`, `gofmt -s -l`, and `GOOS=windows` build/vet all stay green.
+**Broker-clock time semantics and `ClockSkew` (#32, #34).** All library timestamps are Unix epochs in the broker server's clock (typically UTC+2/+3), not UTC — now documented on the `Time` fields, on every `.TimeUTC()` helper, and in a README "Time semantics" section with safe patterns. The motivating production bug: `time.Now().Unix() - rate.Time` understated a data gap by the broker offset, silently losing 180 M1 bars. New `ClockSkew(ctx, symbol)` estimates the current offset from a live M1 bar at 30-minute granularity and rejects stale bars via the new `ErrStaleBar`/`ErrNoBars` sentinels; validated live at exactly +3h against a UTC+3 broker.
 
-The flagship 1.26 security features (post-quantum TLS, crypto ignoring a supplied RNG) do not apply here — this is a named-pipe client with no TLS, no `net/http`, and only `crypto/sha256`. The security benefit is limited to the automatic toolchain hardening (heap randomization).
+**`SubscribeTicks` lifecycle fixes (#35).** The drop-oldest eviction could permanently deadlock the poll goroutine when the consumer drained the buffer mid-eviction (near-certain with `WithTickBufferSize(1)`); eviction and re-send are now non-blocking. A `Close()` racing a new subscription could leak a hot-spinning poller with a never-closing channel; registration now checks the client's closed flag, the same guard `PollQuotes` uses.
 
 For older releases, see the [GitHub releases page](https://github.com/Mukbeast4/go-mt5/releases).
 
