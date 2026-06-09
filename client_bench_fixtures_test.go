@@ -2,7 +2,9 @@ package gomt5_test
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -108,6 +110,52 @@ func BenchmarkSymbolsGet_959Symbols(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if _, err := client.SymbolsGet(ctx, ""); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkSymbolsGetByGroup_93Symbols(b *testing.B) {
+	raw, err := os.ReadFile("testdata/symbols_all.bin")
+	if err != nil {
+		b.Skipf("fixture missing: %v", err)
+	}
+	const recordSize = 2993
+	const count = 93
+	if len(raw) < 4+count*recordSize {
+		b.Fatalf("fixture too short: %d bytes", len(raw))
+	}
+	payload := writeU32(nil, count)
+	payload = append(payload, raw[4:4+count*recordSize]...)
+
+	names := make([]string, count)
+	for i := range names {
+		names[i] = fmt.Sprintf("SYM%02d", i)
+	}
+	group := strings.Join(names, ",")
+
+	ctx := context.Background()
+	mock := newMockPipe(b, func(cmdID uint32, params []byte) (bool, []byte) {
+		if cmdID == protocol.CmdInitialize {
+			return true, writeU32(nil, 5836)
+		}
+		if cmdID == protocol.CmdSymbolsGetByGroup {
+			return true, payload
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		b.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := client.SymbolsGet(ctx, group); err != nil {
 			b.Fatal(err)
 		}
 	}
