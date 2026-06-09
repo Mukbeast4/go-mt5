@@ -29,7 +29,11 @@ func (c *Client) SymbolsGet(ctx context.Context, group string) ([]SymbolInfo, er
 		w.WriteString(group)
 	}
 
-	data, err := c.SendRaw(ctx, cmdID, w.Bytes())
+	return c.symbolsGetRaw(ctx, cmdID, w.Bytes())
+}
+
+func (c *Client) symbolsGetRaw(ctx context.Context, cmdID uint32, params []byte) ([]SymbolInfo, error) {
+	data, err := c.SendRaw(ctx, cmdID, params)
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,8 @@ import (
 	"math"
 	"strings"
 	"time"
+
+	"github.com/mukbeast4/go-mt5/internal/protocol"
 )
 
 type quotePoll struct {
@@ -77,8 +79,11 @@ func (c *Client) pollQuotes(ctx context.Context, symbols []string, interval time
 		return nil, nil, ErrNotConnected
 	}
 
-	group := strings.Join(deduped, ",")
-	infos, err := c.SymbolsGet(ctx, group)
+	w := protocol.NewWriter()
+	w.WriteString(strings.Join(deduped, ","))
+	groupParams := w.Bytes()
+
+	infos, err := c.symbolsGetRaw(ctx, protocol.CmdSymbolsGetByGroup, groupParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -130,7 +135,7 @@ func (c *Client) pollQuotes(ctx context.Context, symbols []string, interval time
 	prev := maps.Clone(snapshot)
 	ch <- snapshot
 
-	go c.runQuotePoll(pollCtx, poll, want, group, interval, prev)
+	go c.runQuotePoll(pollCtx, poll, want, groupParams, interval, prev)
 
 	return ch, errCh, nil
 }
@@ -140,7 +145,7 @@ type quoteChange struct {
 	tick Tick
 }
 
-func (c *Client) runQuotePoll(ctx context.Context, poll *quotePoll, want map[string]struct{}, group string, interval time.Duration, prev map[string]Tick) {
+func (c *Client) runQuotePoll(ctx context.Context, poll *quotePoll, want map[string]struct{}, groupParams []byte, interval time.Duration, prev map[string]Tick) {
 	defer func() {
 		c.subMu.Lock()
 		delete(c.quotePolls, poll)
@@ -155,13 +160,14 @@ func (c *Client) runQuotePoll(ctx context.Context, poll *quotePoll, want map[str
 	defer ticker.Stop()
 
 	var pending []quoteChange
+	latest := make(map[string]Tick, len(want))
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			infos, err := c.SymbolsGet(ctx, group)
+			infos, err := c.symbolsGetRaw(ctx, protocol.CmdSymbolsGetByGroup, groupParams)
 			if err != nil {
 				if ctx.Err() != nil {
 					return
@@ -180,7 +186,7 @@ func (c *Client) runQuotePoll(ctx context.Context, poll *quotePoll, want map[str
 				return
 			}
 
-			latest := make(map[string]Tick, len(want))
+			clear(latest)
 			for i := range infos {
 				info := &infos[i]
 				if _, ok := want[info.SymbolName]; !ok {

@@ -508,3 +508,39 @@ func TestSymbolInfoTickConversion(t *testing.T) {
 		t.Errorf("VolumeReal: got %v", tick.VolumeReal)
 	}
 }
+
+func TestPollQuotesEmittedMapsAreDistinct(t *testing.T) {
+	base := loadSymbolRecord(t)
+	payloads := make(chan []byte)
+	client, _ := newQuoteTestClient(t, payloads)
+
+	rec := func(bid float64) []byte {
+		return symbolRecord(t, base, "EURUSD", 1700000000, bid, bid+0.0001, 0)
+	}
+
+	prePush(payloads, symbolsResponse(rec(1.10000)))
+	quotes, err := client.PollQuotes(context.Background(), []string{"EURUSD"}, time.Millisecond)
+	if err != nil {
+		t.Fatalf("poll quotes: %v", err)
+	}
+
+	first := recvQuotes(t, quotes)
+	first["EURUSD"] = gomt5.Tick{Bid: 999}
+	first["INJECTED"] = gomt5.Tick{Bid: 666}
+
+	push(t, payloads, symbolsResponse(rec(1.20000)))
+	second := recvQuotes(t, quotes)
+	if second["EURUSD"].Bid != 1.20000 {
+		t.Fatalf("second map polluted by consumer mutation: %v", second)
+	}
+	if _, ok := second["INJECTED"]; ok {
+		t.Fatal("emitted maps share storage with previously emitted map")
+	}
+
+	delete(second, "EURUSD")
+	push(t, payloads, symbolsResponse(rec(1.30000)))
+	third := recvQuotes(t, quotes)
+	if third["EURUSD"].Bid != 1.30000 {
+		t.Fatalf("third map affected by consumer mutation of second: %v", third)
+	}
+}
