@@ -195,8 +195,20 @@ Response: [payload_len:LE32][cmd_echo:LE32][success:LE32][data...]
 | Data analysis | `analysis.NewRateSeries()`, `SMA()`, `EMA()` |
 | CSV export | `analysis.ToCSV(writer, rates)` |
 | Time helpers | `ToTime()`, `FromTime()`, `.TimeUTC()` methods |
+| Broker clock skew | `ClockSkew(ctx, symbol)` |
 | Request validation | `TradeRequest.Validate()` |
 | Auto-reconnect | `WithAutoReconnect(true)` |
+
+## Time semantics
+
+All timestamps in this library — `Rate.Time`, `Tick.Time`/`Tick.TimeMsc`, `SymbolInfo.Time`, and the order/position/deal times — are Unix epochs in the **broker server's clock** (typically UTC+2 or UTC+3, usually shifting with DST), not UTC. The `.TimeUTC()` helpers return that broker-clock instant labeled UTC; it equals true UTC only when the broker runs UTC.
+
+This bites in practice: `time.Now().Unix() - rate.Time` understates elapsed time by the broker offset, so a data gap shorter than the offset can look like "nothing missed". Safe patterns:
+
+- Never mix `time.Now()` with bar or tick times; compare bar times to bar times only.
+- To estimate elapsed time, use the local wall clock of the previous successful call, not the bar timestamp.
+- After a positional fetch, verify continuity in the bar-time domain (oldest fetched <= last known + timeframe duration) instead of trusting a wall-clock estimate.
+- `ClockSkew(ctx, symbol)` estimates the current offset from a live M1 bar (30-minute granularity; the symbol should be actively trading — stale bars are rejected with `ErrStaleBar`). The offset changes with broker DST, so do not cache it long-term or apply it to historical bars across a DST boundary.
 
 ## Limitations
 
@@ -205,6 +217,7 @@ Response: [payload_len:LE32][cmd_echo:LE32][success:LE32][data...]
 - **MT5 build compatibility**: MetaQuotes may change the pipe protocol between MT5 builds without notice. If something breaks after an MT5 update, please open an issue with your build number.
 - **Broker differences**: Different brokers configure their MT5 servers differently. Filling modes, symbol visibility, available order types, and margin calculation methods vary. Always check `SymbolInfo` before trading.
 - **Single terminal**: The library connects to one MT5 terminal instance. If multiple terminals are running, use `WithPipeName` to target a specific one.
+- **Timestamps are broker-clock epochs**: not UTC — see [Time semantics](#time-semantics).
 - **Tick streaming via polling**: `SubscribeTicks` works by polling `SymbolInfoTick` on an interval — roughly 10 RPC/s per symbol at the default 100ms, all serialized on the single pipe. Past ~20 symbols the pollers starve every other call; use `PollQuotes` instead, which covers the whole list with one `SymbolsGet` RPC per interval. True push streaming from the pipe protocol has not been reverse-engineered yet.
 
 ## Testing

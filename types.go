@@ -63,16 +63,18 @@ type VersionInfo struct {
 }
 
 type SymbolInfo struct {
-	Custom                  bool    `json:"custom"`
-	ChartMode               int64   `json:"chart_mode"`
-	Select                  bool    `json:"select"`
-	Visible                 bool    `json:"visible"`
-	SessionDeals            int64   `json:"session_deals"`
-	SessionBuyOrders        int64   `json:"session_buy_orders"`
-	SessionSellOrders       int64   `json:"session_sell_orders"`
-	Volume                  int64   `json:"volume"`
-	VolumeHigh              int64   `json:"volumehigh"`
-	VolumeLow               int64   `json:"volumelow"`
+	Custom            bool  `json:"custom"`
+	ChartMode         int64 `json:"chart_mode"`
+	Select            bool  `json:"select"`
+	Visible           bool  `json:"visible"`
+	SessionDeals      int64 `json:"session_deals"`
+	SessionBuyOrders  int64 `json:"session_buy_orders"`
+	SessionSellOrders int64 `json:"session_sell_orders"`
+	Volume            int64 `json:"volume"`
+	VolumeHigh        int64 `json:"volumehigh"`
+	VolumeLow         int64 `json:"volumelow"`
+	// Time is a Unix epoch in the broker server's clock (typically
+	// UTC+2/+3), not UTC.
 	Time                    int64   `json:"time"`
 	Digits                  int64   `json:"digits"`
 	Spread                  int64   `json:"spread"`
@@ -162,6 +164,8 @@ type SymbolInfo struct {
 }
 
 type Tick struct {
+	// Time and TimeMsc are Unix epochs (seconds and milliseconds) in the
+	// broker server's clock (typically UTC+2/+3), not UTC.
 	Time       int64   `json:"time"`
 	Bid        float64 `json:"bid"`
 	Ask        float64 `json:"ask"`
@@ -173,6 +177,8 @@ type Tick struct {
 }
 
 type Rate struct {
+	// Time is the bar open time as a Unix epoch in the broker server's
+	// clock (typically UTC+2/+3), not UTC.
 	Time       int64   `json:"time"`
 	Open       float64 `json:"open"`
 	High       float64 `json:"high"`
