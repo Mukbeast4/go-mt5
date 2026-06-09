@@ -57,6 +57,11 @@ func (c *Client) subscribeTicks(ctx context.Context, symbol string, withErrors b
 	sub := &tickSub{ch: ch, errCh: errCh, cancel: cancel}
 
 	c.subMu.Lock()
+	if c.closed {
+		c.subMu.Unlock()
+		cancel()
+		return nil, nil, ErrNotConnected
+	}
 	if existing, ok := c.subs[symbol]; ok {
 		existing.cancel()
 	}
@@ -124,8 +129,14 @@ func (c *Client) pollTicks(ctx context.Context, symbol string, sub *tickSub, int
 			select {
 			case sub.ch <- *tick:
 			default:
-				<-sub.ch
-				sub.ch <- *tick
+				select {
+				case <-sub.ch:
+				default:
+				}
+				select {
+				case sub.ch <- *tick:
+				default:
+				}
 				c.logger.Debug("tick buffer full for %s, dropped oldest", symbol)
 			}
 		}
