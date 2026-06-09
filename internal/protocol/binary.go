@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strings"
 	"unicode/utf16"
 )
 
@@ -177,16 +178,40 @@ func (r *Reader) ReadFixedString(slotBytes int) string {
 	}
 	end := r.pos + slotBytes
 	buf := r.data[r.pos:end]
+	r.pos = end
 
-	u16 := make([]uint16, 0, slotBytes/2)
-	for i := 0; i+1 < len(buf); i += 2 {
-		c := binary.LittleEndian.Uint16(buf[i:])
+	n := 0
+	ascii := true
+	for ; n*2+1 < len(buf); n++ {
+		c := binary.LittleEndian.Uint16(buf[n*2:])
 		if c == 0 {
 			break
 		}
-		u16 = append(u16, c)
+		if c >= 0x80 {
+			ascii = false
+		}
 	}
-	r.pos = end
+	if n == 0 {
+		return ""
+	}
+	if ascii {
+		var b strings.Builder
+		b.Grow(n)
+		for i := range n {
+			b.WriteByte(buf[i*2])
+		}
+		return b.String()
+	}
+	return decodeUTF16LE(buf[:n*2])
+}
+
+// decodeUTF16LE is the non-ASCII fallback, kept identical to the
+// pre-fast-path implementation (differential fuzz pins it).
+func decodeUTF16LE(b []byte) string {
+	u16 := make([]uint16, 0, len(b)/2)
+	for i := 0; i+1 < len(b); i += 2 {
+		u16 = append(u16, binary.LittleEndian.Uint16(b[i:]))
+	}
 	return string(utf16.Decode(u16))
 }
 

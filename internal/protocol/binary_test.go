@@ -184,3 +184,44 @@ func TestResponseParsing(t *testing.T) {
 		t.Errorf("build: expected 5684, got %d", build)
 	}
 }
+
+func TestReadFixedStringVectors(t *testing.T) {
+	cases := []struct {
+		name    string
+		data    []byte
+		slot    int
+		want    string
+		wantErr bool
+		wantPos int
+	}{
+		{"empty slot", make([]byte, 64), 64, "", false, 64},
+		{"zero slot", []byte{}, 0, "", false, 0},
+		{"ascii full", unitsLE('E', 'U', 'R', 'U', 'S', 'D', 0, 0), 16, "EURUSD", false, 16},
+		{"ascii nul then garbage", unitsLE('E', 'U', 'R', 0, 'X', 'X'), 12, "EUR", false, 12},
+		{"max length no nul", unitsLE('A', 'B', 'C', 'D'), 8, "ABCD", false, 8},
+		{"latin1 e acute", unitsLE(0x00E9, 0), 4, "é", false, 4},
+		{"cjk bmp", unitsLE(0x4E2D, 0x6587, 0), 6, "中文", false, 6},
+		{"surrogate pair", unitsLE(0xD83D, 0xDE00, 0), 6, "\U0001F600", false, 6},
+		{"lone high surrogate", unitsLE(0xD83D, 0), 4, "�", false, 4},
+		{"lone low surrogate", unitsLE(0xDE00, 0), 4, "�", false, 4},
+		{"surrogate split by nul", unitsLE(0xD83D, 0, 0xDE00), 6, "�", false, 6},
+		{"mixed ascii nonascii", unitsLE('a', 0x00E9, 'b', 0), 8, "aéb", false, 8},
+		{"odd slot", make([]byte, 10), 3, "", true, 0},
+		{"eof", make([]byte, 10), 64, "", true, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := protocol.NewReader(tc.data)
+			got := r.ReadFixedString(tc.slot)
+			if got != tc.want {
+				t.Errorf("output: got %q, want %q", got, tc.want)
+			}
+			if (r.Err() != nil) != tc.wantErr {
+				t.Errorf("err: got %v, wantErr=%v", r.Err(), tc.wantErr)
+			}
+			if r.Pos() != tc.wantPos {
+				t.Errorf("pos: got %d, want %d", r.Pos(), tc.wantPos)
+			}
+		})
+	}
+}
