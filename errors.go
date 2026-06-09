@@ -68,4 +68,6 @@ var (
 	ErrTerminalClose = errors.New("mt5: terminal closed")
 	ErrTradeDisabled = errors.New("mt5: trading disabled")
 	ErrNoTick        = errors.New("mt5: no tick available")
+	ErrNoBars        = errors.New("mt5: no bars available")
+	ErrStaleBar      = errors.New("mt5: stale bar")
 )
