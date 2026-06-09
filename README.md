@@ -244,15 +244,15 @@ go-mt5/
 
 ## Changelog
 
-### v0.1.13
+### v0.1.14
 
-Bulk quote polling, broker-clock time semantics, and tick-stream lifecycle fixes. Additive — no breaking API changes.
+Performance release: protocol decode allocations cut by two thirds. No API or wire-format changes.
 
-**`PollQuotes` / `PollQuotesWithErrors` (#31, #33).** Polls a whole symbol list with one `SymbolsGet` group RPC per interval instead of one goroutine per symbol: 93 symbols via `SubscribeTicks` demand ~930 RPC/s on the single pipe and starve every other call site, while `PollQuotes` covers the same fleet at 1 RPC per interval. Emits one `map[string]Tick` per poll containing only the symbols whose Bid/Ask/Last changed (the first map is a full snapshot); cap-1 channel with lossless coalescing for slow consumers; fail-fast on unknown, unselected, or group-syntax-unsafe symbol names; `Client.Close()` terminates running polls. Validated against a production terminal (build 5836): 30 symbols, 60s soak, exactly 1.00 RPC/s, full 30/30 snapshot, bids identical to `SymbolInfoTick`. Ships with `SymbolInfo.Tick()` and `examples/quotes`.
+**Single-alloc fixed-string decode (#37, #38).** `ReadFixedString` — behind every SymbolInfo, position, order, and deal string field — now decodes empty slots with zero allocations and ASCII content with exactly one (previously up to three per field, including a `[]uint16` intermediate even for empty slots). Non-ASCII content takes a fallback that is the previous implementation verbatim, pinned by a differential fuzz target: 126M executions with zero divergence on output, cursor, or error state. Benchstat n=10: `SymbolsGet` (959 symbols) -47% time, -25% bytes, -68% allocs (21,111 to 6,753); the production 93-symbol `PollQuotes` shape -36% time, -68% allocs; `HistoryDealsGet` -78% allocs.
 
-**Broker-clock time semantics and `ClockSkew` (#32, #34).** All library timestamps are Unix epochs in the broker server's clock (typically UTC+2/+3), not UTC — now documented on the `Time` fields, on every `.TimeUTC()` helper, and in a README "Time semantics" section with safe patterns. The motivating production bug: `time.Now().Unix() - rate.Time` understated a data gap by the broker offset, silently losing 180 M1 bars. New `ClockSkew(ctx, symbol)` estimates the current offset from a live M1 bar at 30-minute granularity and rejects stale bars via the new `ErrStaleBar`/`ErrNoBars` sentinels; validated live at exactly +3h against a UTC+3 broker.
+**Single-write requests.** `WriteRequest` sends header and params in one buffer and one syscall instead of two. Validated against a production terminal (build 5836): connection handshake, full symbol fetch, and a maximal `OrderCheck` payload all pass through the new path.
 
-**`SubscribeTicks` lifecycle fixes (#35).** The drop-oldest eviction could permanently deadlock the poll goroutine when the consumer drained the buffer mid-eviction (near-certain with `WithTickBufferSize(1)`); eviction and re-send are now non-blocking. A `Close()` racing a new subscription could leak a hot-spinning poller with a never-closing channel; registration now checks the client's closed flag, the same guard `PollQuotes` uses.
+**`PollQuotes` steady-state reuse.** The per-poll diff map is reused across polls and the group parameter is encoded once at subscription instead of every interval. Live back-to-back 60s soaks on a production terminal: total allocations -39% (11.97 to 7.33 MB), GC cycles 3 to 2, retained heap 2.15 to 0.77 MB, RPC latency p50 -6.7% and p99 -6.2%, with identical correctness.
 
 For older releases, see the [GitHub releases page](https://github.com/Mukbeast4/go-mt5/releases).
 
