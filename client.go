@@ -57,6 +57,8 @@ type Client struct {
 	pipeTimeout       time.Duration
 	subMu             sync.Mutex
 	subs              map[string]*tickSub
+	quotePolls        map[*quotePoll]struct{}
+	closed            bool
 	tickBufferSize    int
 	tickPollInterval  time.Duration
 }
@@ -154,6 +156,7 @@ func newClientFromOptions(conn io.ReadWriteCloser, pipeName string, o *options) 
 		pipeName:          pipeName,
 		pipeTimeout:       o.timeout,
 		subs:              make(map[string]*tickSub),
+		quotePolls:        make(map[*quotePoll]struct{}),
 		tickBufferSize:    o.tickBufferSize,
 		tickPollInterval:  o.tickPollInterval,
 	}
@@ -167,9 +170,14 @@ func (c *Client) Close() error {
 	}
 
 	c.subMu.Lock()
+	c.closed = true
 	for symbol, sub := range c.subs {
 		sub.cancel()
 		delete(c.subs, symbol)
+	}
+	for poll := range c.quotePolls {
+		poll.cancel()
+		delete(c.quotePolls, poll)
 	}
 	c.subMu.Unlock()
 

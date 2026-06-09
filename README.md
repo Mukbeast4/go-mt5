@@ -80,7 +80,8 @@ The `examples/` directory contains runnable programs covering the main use cases
 | `examples/connect` | Connect, read account / terminal info, count symbols |
 | `examples/rates` | Fetch OHLCV bars via `CopyRatesFromPos` |
 | `examples/ticks` | Fetch recent ticks via `CopyTicksFrom` |
-| `examples/stream` | Subscribe to live ticks across multiple symbols |
+| `examples/stream` | Subscribe to live ticks for a few symbols |
+| `examples/quotes` | Poll quotes for a whole symbol list with one RPC per interval |
 | `examples/trade` | Place a market order with `tradeutil.Buy` |
 | `examples/risk` | Position sizing from balance, symbol info, and current tick |
 
@@ -189,6 +190,7 @@ Response: [payload_len:LE32][cmd_echo:LE32][success:LE32][data...]
 | Request hooks | `WithOnRequest(hook)` |
 | Debug logging | `WithDebug(true)`, `WithLogger(l)` |
 | Tick streaming (polling) | `SubscribeTicks(ctx, symbol)` |
+| Bulk quote polling | `PollQuotes(ctx, symbols, interval)` |
 | Trade helpers | `tradeutil.Buy()`, `Sell()`, `ClosePosition()`, etc. |
 | Data analysis | `analysis.NewRateSeries()`, `SMA()`, `EMA()` |
 | CSV export | `analysis.ToCSV(writer, rates)` |
@@ -203,7 +205,7 @@ Response: [payload_len:LE32][cmd_echo:LE32][success:LE32][data...]
 - **MT5 build compatibility**: MetaQuotes may change the pipe protocol between MT5 builds without notice. If something breaks after an MT5 update, please open an issue with your build number.
 - **Broker differences**: Different brokers configure their MT5 servers differently. Filling modes, symbol visibility, available order types, and margin calculation methods vary. Always check `SymbolInfo` before trading.
 - **Single terminal**: The library connects to one MT5 terminal instance. If multiple terminals are running, use `WithPipeName` to target a specific one.
-- **Tick streaming via polling**: `SubscribeTicks` works by polling `SymbolInfoTick` on an interval. True push streaming from the pipe protocol has not been reverse-engineered yet.
+- **Tick streaming via polling**: `SubscribeTicks` works by polling `SymbolInfoTick` on an interval — roughly 10 RPC/s per symbol at the default 100ms, all serialized on the single pipe. Past ~20 symbols the pollers starve every other call; use `PollQuotes` instead, which covers the whole list with one `SymbolsGet` RPC per interval. True push streaming from the pipe protocol has not been reverse-engineered yet.
 
 ## Testing
 
