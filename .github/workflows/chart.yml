@@ -1,0 +1,42 @@
+name: chart
+
+on:
+  schedule:
+    - cron: "37 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: chart
+
+jobs:
+  chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: Mukbeast4/star-candles
+      - uses: actions/checkout@v7
+        with:
+          ref: chart
+          path: .chart
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HISTORY_FILE: .chart/history.json
+          OUTPUT_DIR: .chart
+        run: go run ./cmd/star-candles
+      - run: |
+          cd .chart
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(chart): update star chart"
+            git push origin chart
+          fi
