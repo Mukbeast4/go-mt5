@@ -256,6 +256,34 @@ Performance release: protocol decode allocations cut by two thirds. No API or wi
 
 For older releases, see the [GitHub releases page](https://github.com/Mukbeast4/go-mt5/releases).
 
+## Stars
+
+Star history as candlestick charts, updated hourly by [star-candles](https://github.com/Mukbeast4/star-candles).
+
+<details open>
+  <summary><b>Daily</b></summary>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Mukbeast4/go-mt5/chart/chart-daily-dark.svg">
+    <img alt="Daily candlestick chart of this repository's GitHub stars" src="https://raw.githubusercontent.com/Mukbeast4/go-mt5/chart/chart-daily-light.svg">
+  </picture>
+</details>
+
+<details>
+  <summary><b>Monthly</b></summary>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Mukbeast4/go-mt5/chart/chart-monthly-dark.svg">
+    <img alt="Monthly candlestick chart of this repository's GitHub stars" src="https://raw.githubusercontent.com/Mukbeast4/go-mt5/chart/chart-monthly-light.svg">
+  </picture>
+</details>
+
+<details>
+  <summary><b>Yearly</b></summary>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Mukbeast4/go-mt5/chart/chart-yearly-dark.svg">
+    <img alt="Yearly candlestick chart of this repository's GitHub stars" src="https://raw.githubusercontent.com/Mukbeast4/go-mt5/chart/chart-yearly-light.svg">
+  </picture>
+</details>
+
 ## Contributing
 
 We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting a pull request.
