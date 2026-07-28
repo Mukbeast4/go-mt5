@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="440" viewBox="0 0 880 440" role="img" aria-label="Daily candlestick chart of GitHub stars for Mukbeast4/go-mt5">
+<rect width="880" height="440" rx="8" fill="#fcfcfb"/>
+<text x="24" y="42" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" fill="#52514e">Mukbeast4/go-mt5 · Daily</text>
+<text x="24" y="74" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"><tspan font-size="28" font-weight="600" fill="#0b0b0b">9</tspan><tspan dx="8" font-size="13" fill="#52514e">stars</tspan></text>
+<line x1="24.0" y1="390.0" x2="792.0" y2="390.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="390.0" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">0</text>
+<line x1="24.0" y1="329.6" x2="792.0" y2="329.6" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="329.6" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">2</text>
+<line x1="24.0" y1="269.2" x2="792.0" y2="269.2" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="269.2" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">4</text>
+<line x1="24.0" y1="208.8" x2="792.0" y2="208.8" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="208.8" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">6</text>
+<line x1="24.0" y1="148.4" x2="792.0" y2="148.4" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="148.4" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">8</text>
+<line x1="24.0" y1="88.0" x2="792.0" y2="88.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="88.0" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">10</text>
+<line x1="66.7" y1="359.8" x2="66.7" y2="359.8" stroke="#199e70" stroke-width="1"/>
+<rect x="55.4" y="359.8" width="22.5" height="0.5" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<text x="66.7" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Mar 26</text>
+<line x1="152.0" y1="299.4" x2="152.0" y2="359.8" stroke="#199e70" stroke-width="1"/>
+<rect x="140.8" y="300.1" width="22.5" height="58.9" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<line x1="237.3" y1="269.2" x2="237.3" y2="299.4" stroke="#199e70" stroke-width="1"/>
+<rect x="226.1" y="269.9" width="22.5" height="28.7" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<text x="237.3" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">May 8</text>
+<line x1="322.7" y1="239.0" x2="322.7" y2="269.2" stroke="#199e70" stroke-width="1"/>
+<rect x="311.4" y="239.8" width="22.5" height="28.7" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<line x1="408.0" y1="208.8" x2="408.0" y2="239.0" stroke="#199e70" stroke-width="1"/>
+<rect x="396.8" y="209.6" width="22.5" height="28.7" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<text x="408.0" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">May 30</text>
+<line x1="493.3" y1="178.6" x2="493.3" y2="208.8" stroke="#199e70" stroke-width="1"/>
+<rect x="482.1" y="179.4" width="22.5" height="28.7" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<line x1="578.7" y1="148.4" x2="578.7" y2="178.6" stroke="#199e70" stroke-width="1"/>
+<rect x="567.4" y="149.1" width="22.5" height="28.7" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<text x="578.7" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Jun 11</text>
+<line x1="664.0" y1="118.2" x2="664.0" y2="148.4" stroke="#199e70" stroke-width="1"/>
+<rect x="652.8" y="118.9" width="22.5" height="28.7" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<line x1="749.3" y1="118.2" x2="749.3" y2="118.2" stroke="#199e70" stroke-width="1"/>
+<rect x="738.1" y="118.2" width="22.5" height="0.5" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<text x="749.3" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Jul 28</text>
+<rect x="0.5" y="0.5" width="879" height="439" rx="8" fill="none" stroke="rgba(11,11,11,0.10)"/>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="440" viewBox="0 0 880 440" role="img" aria-label="Monthly candlestick chart of GitHub stars for Mukbeast4/go-mt5">
+<rect width="880" height="440" rx="8" fill="#fcfcfb"/>
+<text x="24" y="42" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" fill="#52514e">Mukbeast4/go-mt5 · Monthly</text>
+<text x="24" y="74" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"><tspan font-size="28" font-weight="600" fill="#0b0b0b">9</tspan><tspan dx="8" font-size="13" fill="#52514e">stars</tspan></text>
+<line x1="24.0" y1="390.0" x2="792.0" y2="390.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="390.0" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">0</text>
+<line x1="24.0" y1="329.6" x2="792.0" y2="329.6" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="329.6" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">2</text>
+<line x1="24.0" y1="269.2" x2="792.0" y2="269.2" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="269.2" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">4</text>
+<line x1="24.0" y1="208.8" x2="792.0" y2="208.8" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="208.8" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">6</text>
+<line x1="24.0" y1="148.4" x2="792.0" y2="148.4" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="148.4" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">8</text>
+<line x1="24.0" y1="88.0" x2="792.0" y2="88.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="88.0" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">10</text>
+<line x1="100.8" y1="359.8" x2="100.8" y2="359.8" stroke="#199e70" stroke-width="1"/>
+<rect x="89.5" y="359.8" width="22.5" height="0.5" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<text x="100.8" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Mar 2026</text>
+<line x1="254.4" y1="299.4" x2="254.4" y2="359.8" stroke="#199e70" stroke-width="1"/>
+<rect x="243.1" y="300.1" width="22.5" height="58.9" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<text x="254.4" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Apr 2026</text>
+<line x1="408.0" y1="208.8" x2="408.0" y2="299.4" stroke="#199e70" stroke-width="1"/>
+<rect x="396.8" y="209.6" width="22.5" height="89.1" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<text x="408.0" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">May 2026</text>
+<line x1="561.6" y1="118.2" x2="561.6" y2="208.8" stroke="#199e70" stroke-width="1"/>
+<rect x="550.4" y="118.9" width="22.5" height="89.1" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<text x="561.6" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Jun 2026</text>
+<line x1="715.2" y1="118.2" x2="715.2" y2="118.2" stroke="#199e70" stroke-width="1"/>
+<rect x="703.9" y="118.2" width="22.5" height="0.5" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<text x="715.2" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Jul 2026</text>
+<rect x="0.5" y="0.5" width="879" height="439" rx="8" fill="none" stroke="rgba(11,11,11,0.10)"/>
+</svg>
