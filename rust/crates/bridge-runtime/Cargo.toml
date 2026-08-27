@@ -1,0 +1,16 @@
+[package]
+name = "bridge-runtime"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+bridge-protocol = { path = "../bridge-protocol" }
+mt5-wire = { path = "../mt5-wire" }
+prost.workspace = true
+rand.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true

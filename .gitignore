@@ -20,3 +20,6 @@ mt5_frida_capture/
 *.pyd
 *.bin
 !testdata/*.bin
+
+# Rust bridge build output
+rust/target/

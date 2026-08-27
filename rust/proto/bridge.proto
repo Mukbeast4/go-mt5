@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package mt5bridge.v1;
+
+// This file is the language-neutral contract. The Rust types in
+// bridge-protocol are hand-derived with prost so the bridge does not need a
+// protoc installation at build time.
+
+message Value {
+  oneof kind {
+    bool bool_value = 1;
+    sint64 i64_value = 2;
+    uint64 u64_value = 3;
+    double f64_value = 4;
+    string string_value = 5;
+    bytes bytes_value = 6;
+    ValueList list_value = 7;
+    ValueObject object_value = 8;
+  }
+}
+
+message ValueList { repeated Value values = 1; }
+message ValueField { string name = 1; Value value = 2; }
+message ValueObject { repeated ValueField fields = 1; }
+
+enum Operation {
+  OPERATION_UNSPECIFIED = 0;
+  BRIDGE_STATUS = 1;
+  VERSION = 2;
+  ACCOUNT_INFO = 3;
+  TERMINAL_INFO = 4;
+  SYMBOLS_TOTAL = 5;
+  SYMBOLS_GET = 6;
+  SYMBOL_INFO = 7;
+  SYMBOL_INFO_TICK = 8;
+  SYMBOL_SELECT = 9;
+  COPY_RATES_FROM = 10;
+  COPY_RATES_FROM_POS = 11;
+  COPY_RATES_RANGE = 12;
+  COPY_TICKS_FROM = 13;
+  COPY_TICKS_RANGE = 14;
+  POSITIONS_TOTAL = 15;
+  POSITIONS_GET = 16;
+  ORDERS_TOTAL = 17;
+  ORDERS_GET = 18;
+  HISTORY_ORDERS_TOTAL = 19;
+  HISTORY_ORDERS_GET = 20;
+  HISTORY_DEALS_TOTAL = 21;
+  HISTORY_DEALS_GET = 22;
+  ORDER_CHECK = 23;
+  ORDER_SEND = 24;
+  ORDER_CALC_MARGIN = 25;
+  ORDER_CALC_PROFIT = 26;
+  MARKET_BOOK_SNAPSHOT = 27;
+}
+
+enum PayloadSchema {
+  PAYLOAD_SCHEMA_UNSPECIFIED = 0;
+  PROTO_VALUES = 1;
+  RATE_V1 = 2;
+  TICK_V1 = 3;
+}
+
+enum ExecutionCertainty {
+  NOT_DISPATCHED = 0;
+  RESULT_RECEIVED = 1;
+  OUTCOME_UNKNOWN = 2;
+}
+
+message Hello {
+  string client_id = 1;
+  bytes token = 2;
+}
+
+message HelloAck {
+  bytes bridge_instance_id = 1;
+  bytes session_id = 2;
+  uint64 terminal_epoch = 3;
+  string terminal_state = 4;
+  uint32 terminal_build = 5;
+  sint64 account_login = 6;
+  string account_server = 7;
+  uint32 max_frame_length = 8;
+  uint32 max_metadata_length = 9;
+  uint32 target_chunk_bytes = 10;
+  uint64 initial_response_credit = 11;
+  uint64 capabilities = 12;
+}
+
+message Request {
+  Operation operation = 1;
+  uint64 expected_terminal_epoch = 2;
+  Value params = 3;
+  uint64 deadline_ms = 4; // zero means no caller-imposed deadline
+}
+
+message Response { Operation operation = 1; Value result = 2; }
+
+message ResponseStart {
+  Operation operation = 1;
+  PayloadSchema schema = 2;
+  bool total_rows_known = 3;
+  uint64 total_rows = 4;
+}
+
+message ResponseChunk {
+  uint64 sequence = 1;
+  uint64 row_offset = 2;
+  uint64 row_count = 3;
+  repeated Value records = 4;
+}
+
+message ErrorMessage {
+  string origin = 1;
+  string code = 2;
+  string operation = 3;
+  string message = 4;
+  sint64 native_code = 5;
+  ExecutionCertainty certainty = 6;
+}
+
+message ResponseEnd {
+  bool success = 1;
+  uint64 delivered_rows = 2;
+  ExecutionCertainty certainty = 3;
+  ErrorMessage error = 4;
+}
+
+message Cancel { string reason = 1; }
+message WindowUpdate { uint64 credit_bytes = 1; }
+message Ping { uint64 nonce = 1; }

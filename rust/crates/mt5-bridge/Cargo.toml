@@ -1,0 +1,13 @@
+[package]
+name = "mt5-bridge"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+bridge-runtime = { path = "../bridge-runtime" }
+mt5-windows = { path = "../mt5-windows" }
+tokio.workspace = true
+tracing-subscriber.workspace = true
