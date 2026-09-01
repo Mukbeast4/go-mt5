@@ -21,16 +21,22 @@ MT5_HANDSHAKE_TIMEOUT_SECONDS=5               # optional, positive
 MT5_TCP_WRITE_STALL_TIMEOUT_SECONDS=15        # optional, positive
 MT5_REQUEST_QUEUE_CAPACITY=64                  # optional, positive
 MT5_MAX_CONNECTIONS=32                         # optional, positive
-MT5_PIPE_OPEN_TIMEOUT_SECONDS=60              # optional, Windows pipe open
+MT5_PIPE_OPEN_TIMEOUT_SECONDS=60              # optional, pipe/terminal startup wait
 ```
 
-If the account variables are omitted, the bridge adopts the account returned
-by MT5 during startup and uses that account identity for later checks. If one
+If the account variables are omitted, the bridge adopts the first valid account
+returned by MT5 before a market-data or trading request and uses that identity
+for later checks. Deferring adoption avoids pinning the transient empty account
+that a newly launched terminal can report while restoring its login. If one
 account variable is provided without the other, startup fails. The executable
 derives a pipe name from `MT5_TERMINAL_PATH` using the same
-UTF-16LE/SHA-256 rule as the Go client. An explicit pipe or terminal path is
-required until automatic process discovery has been verified in the target
-Wine environment.
+UTF-16LE/SHA-256 rule as the Go client. When that derived pipe is missing, the
+bridge starts the configured `terminal64.exe` and waits for the pipe to become
+available. It tracks a terminal it started so reconnects do not create duplicate
+processes, and relaunches it only after the previous child has exited. An
+explicit `MT5_PIPE_NAME` always takes precedence and never starts a terminal.
+An explicit pipe or terminal path is required until automatic process discovery
+has been verified in the target Wine environment.
 
 ## Protocol
 

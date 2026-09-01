@@ -1,5 +1,11 @@
 use std::{env, net::SocketAddr, path::PathBuf, time::Duration};
 
+#[cfg(windows)]
+use std::{
+    process::Child,
+    sync::{Arc, Mutex},
+};
+
 use bridge_runtime::{ExpectedAccount, RuntimeConfig};
 
 #[tokio::main]
@@ -50,10 +56,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(windows)]
     {
+        let target = pipe_target()?;
+        let (pipe_name, terminal_path) = match target {
+            PipeTarget::PipeName(name) => (name, None),
+            PipeTarget::Terminal { pipe_name, path } => (pipe_name, Some(path)),
+        };
+        match terminal_path.as_deref() {
+            Some(path) => tracing::debug!(
+                source = "MT5_TERMINAL_PATH",
+                pipe_name = %pipe_name,
+                terminal_path = %path.display(),
+                "configured MT5 pipe target"
+            ),
+            None => tracing::debug!(
+                source = "MT5_PIPE_NAME",
+                pipe_name = %pipe_name,
+                "configured MT5 pipe target"
+            ),
+        }
         let connector = WinePipeConnector {
-            pipe_name: pipe_name()?,
+            pipe_name,
+            terminal_path,
             open_timeout: optional_positive_duration("MT5_PIPE_OPEN_TIMEOUT_SECONDS")?
                 .unwrap_or(Duration::from_secs(60)),
+            launched_terminal: Arc::new(Mutex::new(None)),
         };
         let bridge = bridge_runtime::start_with_connector(connector, config)?;
         bridge.serve().await?;
@@ -90,16 +116,33 @@ fn optional_positive_usize(name: &str) -> Result<Option<usize>, Box<dyn std::err
 }
 
 #[cfg(windows)]
-fn pipe_name() -> Result<String, Box<dyn std::error::Error>> {
-    if let Ok(name) = env::var("MT5_PIPE_NAME")
-        && !name.is_empty()
-    {
-        return Ok(name);
+enum PipeTarget {
+    PipeName(String),
+    Terminal { pipe_name: String, path: PathBuf },
+}
+
+#[cfg(windows)]
+fn pipe_target() -> Result<PipeTarget, Box<dyn std::error::Error>> {
+    pipe_target_from_values(
+        env::var("MT5_PIPE_NAME").ok(),
+        env::var("MT5_TERMINAL_PATH").ok(),
+    )
+}
+
+#[cfg(windows)]
+fn pipe_target_from_values(
+    pipe_name: Option<String>,
+    terminal_path: Option<String>,
+) -> Result<PipeTarget, Box<dyn std::error::Error>> {
+    if let Some(name) = pipe_name.filter(|name| !name.is_empty()) {
+        return Ok(PipeTarget::PipeName(name));
     }
-    if let Ok(path) = env::var("MT5_TERMINAL_PATH") {
-        return Ok(mt5_windows::pipe_name_for_terminal_path(PathBuf::from(
+    if let Some(path) = terminal_path {
+        let path = PathBuf::from(path);
+        return Ok(PipeTarget::Terminal {
+            pipe_name: mt5_windows::pipe_name_for_terminal_path(&path)?,
             path,
-        ))?);
+        });
     }
     Err("set MT5_PIPE_NAME or MT5_TERMINAL_PATH; automatic terminal discovery is intentionally disabled until Wine process-discovery integration is verified".into())
 }
@@ -108,15 +151,117 @@ fn pipe_name() -> Result<String, Box<dyn std::error::Error>> {
 #[derive(Clone)]
 struct WinePipeConnector {
     pipe_name: String,
+    terminal_path: Option<PathBuf>,
     open_timeout: Duration,
+    launched_terminal: Arc<Mutex<Option<Child>>>,
 }
 
 #[cfg(windows)]
 #[async_trait::async_trait]
 impl bridge_runtime::PipeConnector<mt5_windows::NativePipe> for WinePipeConnector {
     async fn connect(&self) -> Result<mt5_windows::NativePipe, String> {
-        mt5_windows::open_pipe(&self.pipe_name, self.open_timeout)
+        match mt5_windows::open_pipe(&self.pipe_name, self.open_timeout).await {
+            Ok(pipe) => return Ok(pipe),
+            Err(error) if self.terminal_path.is_some() && error.is_missing() => {
+                tracing::debug!(
+                    pipe_name = %self.pipe_name,
+                    terminal_path = %self
+                        .terminal_path
+                        .as_deref()
+                        .expect("terminal path checked above")
+                        .display(),
+                    "MT5 pipe is missing; attempting configured terminal startup"
+                );
+                self.ensure_terminal_started()?;
+            }
+            Err(error) => return Err(error.to_string()),
+        }
+
+        mt5_windows::wait_for_pipe(&self.pipe_name, self.open_timeout)
             .await
             .map_err(|error| error.to_string())
+    }
+}
+
+#[cfg(windows)]
+impl WinePipeConnector {
+    fn ensure_terminal_started(&self) -> Result<(), String> {
+        let path = self
+            .terminal_path
+            .as_deref()
+            .expect("terminal path is required for terminal startup");
+        let mut launched = self
+            .launched_terminal
+            .lock()
+            .map_err(|_| "terminal process lock is poisoned".to_owned())?;
+
+        if let Some(child) = launched.as_mut() {
+            match child.try_wait() {
+                Ok(None) => return Ok(()),
+                Ok(Some(status)) => {
+                    tracing::debug!(
+                        path = %path.display(),
+                        ?status,
+                        "configured MT5 terminal exited; relaunching"
+                    );
+                    *launched = None;
+                }
+                Err(error) => {
+                    return Err(format!(
+                        "failed to inspect configured terminal {}: {error}",
+                        path.display()
+                    ));
+                }
+            }
+        }
+
+        let child = mt5_windows::start_terminal(path).map_err(|error| error.to_string())?;
+        tracing::info!(path = %path.display(), pid = child.id(), "started configured MT5 terminal");
+        *launched = Some(child);
+        Ok(())
+    }
+}
+
+#[cfg(windows)]
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn explicit_pipe_takes_precedence_over_terminal_path() {
+        let target = pipe_target_from_values(
+            Some(r"\\.\pipe\explicit".to_owned()),
+            Some(r"C:\missing\terminal64.exe".to_owned()),
+        )
+        .unwrap();
+
+        assert!(matches!(target, PipeTarget::PipeName(name) if name == r"\\.\pipe\explicit"));
+    }
+
+    #[test]
+    fn terminal_path_derives_pipe_name() {
+        let target = pipe_target_from_values(
+            None,
+            Some(r"C:\Program Files\MetaTrader 5\terminal64.exe".to_owned()),
+        )
+        .unwrap();
+
+        assert!(matches!(
+            target,
+            PipeTarget::Terminal { pipe_name, path }
+                if pipe_name == r"\\.\pipe\MT5.Terminal.781AEDD6B227148DB36F632AFAB710BBA441CCEA07ED9EF5BC7B94FAED25BD12"
+                    && path.to_string_lossy() == r"C:\Program Files\MetaTrader 5\terminal64.exe"
+        ));
+    }
+
+    #[test]
+    fn empty_pipe_name_falls_back_to_terminal_path() {
+        let target = pipe_target_from_values(
+            Some(String::new()),
+            Some(r"C:\Program Files\MetaTrader 5\terminal64.exe".to_owned()),
+        )
+        .unwrap();
+
+        assert!(matches!(target, PipeTarget::Terminal { .. }));
     }
 }

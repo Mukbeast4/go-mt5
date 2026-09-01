@@ -10,4 +10,5 @@ async-trait.workspace = true
 bridge-runtime = { path = "../bridge-runtime" }
 mt5-windows = { path = "../mt5-windows" }
 tokio.workspace = true
+tracing.workspace = true
 tracing-subscriber.workspace = true

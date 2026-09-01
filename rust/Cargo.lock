@@ -197,6 +197,7 @@ dependencies = [
  "bridge-runtime",
  "mt5-windows",
  "tokio",
+ "tracing",
  "tracing-subscriber",
 ]
 

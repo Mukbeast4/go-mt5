@@ -342,26 +342,21 @@ where
         let build = u32::from_le_bytes(body[..4].try_into().unwrap());
 
         let account = self.read_account().await?;
-        if self.config.expected_account.is_none() {
-            // No account was pinned by configuration. Capture the identity
-            // observed during the initial attach so a later terminal account
-            // switch is detected instead of silently changing the bridge's
-            // trading context.
-            self.config.expected_account = Some(ExpectedAccount {
-                login: account.0,
-                server: account.1.clone(),
-            });
-        }
-        if let Some(expected) = &self.config.expected_account
-            && (account.0 != expected.login || account.1 != expected.server)
-        {
-            let mut status = self.status.write().expect("terminal status lock poisoned");
-            status.state = "AccountMismatch";
-            status.build = build;
-            status.account_login = account.0;
-            status.account_server = account.1;
-            self.ready = false;
-            return Ok(());
+        if let Some(expected) = &self.config.expected_account {
+            if !account_identity_is_ready(&account) {
+                return Err(WireError::InvalidResponse(
+                    "MT5 terminal account is not ready".into(),
+                ));
+            }
+            if account.0 != expected.login || account.1 != expected.server {
+                let mut status = self.status.write().expect("terminal status lock poisoned");
+                status.state = "AccountMismatch";
+                status.build = build;
+                status.account_login = account.0;
+                status.account_server = account.1;
+                self.ready = false;
+                return Ok(());
+            }
         }
 
         let mut status = self.status.write().expect("terminal status lock poisoned");
@@ -523,16 +518,16 @@ where
                 return;
             }
         };
-        // A terminal can be switched underneath the bridge. Check the fixed
-        // account before every operation that can reveal or alter account
-        // state; terminal/version diagnostics remain available to operators.
-        if self.config.expected_account.is_some()
-            && !matches!(
-                operation,
-                Operation::Version | Operation::TerminalInfo | Operation::BridgeStatus
-            )
-        {
-            match self.verify_account_before_mutation().await {
+        // Adopt an unconfigured account only when the first real request is
+        // dispatched. A freshly launched terminal can expose its pipe before
+        // it has restored the account, so pinning the initialization snapshot
+        // can mistake normal startup for an account switch. Once adopted,
+        // continue checking every non-diagnostic operation.
+        if !matches!(
+            operation,
+            Operation::Version | Operation::TerminalInfo | Operation::BridgeStatus
+        ) {
+            match self.verify_or_adopt_account().await {
                 Ok(()) => {}
                 Err(error) => {
                     self.error_from_wire(
@@ -574,18 +569,33 @@ where
         }
     }
 
-    async fn verify_account_before_mutation(&mut self) -> Result<(), WireError> {
-        let Some(expected) = self.config.expected_account.clone() else {
-            return Ok(());
-        };
+    async fn verify_or_adopt_account(&mut self) -> Result<(), WireError> {
         let account = self.read_account().await?;
-        if account.0 != expected.login || account.1 != expected.server {
-            self.ready = false;
-            self.set_unavailable("AccountMismatch");
+        if let Some(expected) = self.config.expected_account.clone() {
+            if account.0 != expected.login || account.1 != expected.server {
+                self.ready = false;
+                self.set_unavailable("AccountMismatch");
+                return Err(WireError::InvalidResponse(
+                    "configured account no longer matches terminal account".into(),
+                ));
+            }
+            return Ok(());
+        }
+
+        if !account_identity_is_ready(&account) {
             return Err(WireError::InvalidResponse(
-                "configured account no longer matches terminal account".into(),
+                "MT5 terminal account is not ready".into(),
             ));
         }
+
+        debug!(login = account.0, server = %account.1, "adopted terminal account");
+        self.config.expected_account = Some(ExpectedAccount {
+            login: account.0,
+            server: account.1.clone(),
+        });
+        let mut status = self.status.write().expect("terminal status lock poisoned");
+        status.account_login = account.0;
+        status.account_server = account.1;
         Ok(())
     }
 
@@ -1562,6 +1572,10 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
     difference == 0
 }
 
+fn account_identity_is_ready(account: &(i64, String)) -> bool {
+    account.0 > 0 && !account.1.is_empty()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1583,6 +1597,16 @@ mod tests {
         assert!(constant_time_eq(b"abc", b"abc"));
         assert!(!constant_time_eq(b"abc", b"abd"));
         assert!(!constant_time_eq(b"abc", b"ab"));
+    }
+
+    #[test]
+    fn account_identity_requires_a_login_and_server() {
+        assert!(account_identity_is_ready(&(
+            7_395_945,
+            "FPTradingLLC-Demo".into()
+        )));
+        assert!(!account_identity_is_ready(&(0, "FPTradingLLC-Demo".into())));
+        assert!(!account_identity_is_ready(&(7_395_945, String::new())));
     }
 
     #[tokio::test]
@@ -1648,7 +1672,10 @@ mod tests {
         let (bridge_io, mut terminal_io) = tokio::io::duplex(16 * 1024);
         let rates = fixture("rates_h1_50_eurusd.bin");
         let account = fixture("account_info.bin");
+        let mut startup_account = account.clone();
+        startup_account[..8].fill(0);
         let terminal = tokio::spawn(async move {
+            let mut account_requests = 0;
             for _ in 0..4 {
                 let length = terminal_io.read_u32_le().await.unwrap() as usize;
                 let mut request = vec![0_u8; length];
@@ -1656,7 +1683,14 @@ mod tests {
                 let command = u32::from_le_bytes(request[..4].try_into().unwrap());
                 let payload = match command {
                     mt5_wire::CMD_INITIALIZE => 5836_u32.to_le_bytes().to_vec(),
-                    mt5_wire::CMD_ACCOUNT_INFO => account.clone(),
+                    mt5_wire::CMD_ACCOUNT_INFO => {
+                        account_requests += 1;
+                        if account_requests == 1 {
+                            startup_account.clone()
+                        } else {
+                            account.clone()
+                        }
+                    }
                     mt5_wire::CMD_COPY_RATES_FROM_POS => rates.clone(),
                     other => panic!("unexpected MT5 command {other}"),
                 };
