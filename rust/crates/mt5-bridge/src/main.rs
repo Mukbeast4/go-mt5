@@ -21,6 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             login: login.parse()?,
             server,
         }),
+        (Err(_), Err(_)) => None,
         _ => return Err("MT5_ACCOUNT_LOGIN and MT5_ACCOUNT_SERVER are required together".into()),
     };
     let mut config = RuntimeConfig {

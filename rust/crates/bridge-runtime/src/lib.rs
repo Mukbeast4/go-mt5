@@ -342,6 +342,16 @@ where
         let build = u32::from_le_bytes(body[..4].try_into().unwrap());
 
         let account = self.read_account().await?;
+        if self.config.expected_account.is_none() {
+            // No account was pinned by configuration. Capture the identity
+            // observed during the initial attach so a later terminal account
+            // switch is detected instead of silently changing the bridge's
+            // trading context.
+            self.config.expected_account = Some(ExpectedAccount {
+                login: account.0,
+                server: account.1.clone(),
+            });
+        }
         if let Some(expected) = &self.config.expected_account
             && (account.0 != expected.login || account.1 != expected.server)
         {
@@ -1639,7 +1649,7 @@ mod tests {
         let rates = fixture("rates_h1_50_eurusd.bin");
         let account = fixture("account_info.bin");
         let terminal = tokio::spawn(async move {
-            for _ in 0..3 {
+            for _ in 0..4 {
                 let length = terminal_io.read_u32_le().await.unwrap() as usize;
                 let mut request = vec![0_u8; length];
                 terminal_io.read_exact(&mut request).await.unwrap();

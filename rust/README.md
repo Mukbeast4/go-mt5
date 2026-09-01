@@ -14,8 +14,8 @@ MT5_BRIDGE_TOKEN=<per-backend secret>
 MT5_PIPE_NAME=\\.\pipe\MT5.Terminal....
 # or MT5_TERMINAL_PATH=C:\...\terminal64.exe
 MT5_BRIDGE_LISTEN=127.0.0.1:19550             # optional
-MT5_ACCOUNT_LOGIN=123456                      # required, paired with server
-MT5_ACCOUNT_SERVER=Broker-Server              # required, paired with login
+MT5_ACCOUNT_LOGIN=123456                      # optional, paired with server
+MT5_ACCOUNT_SERVER=Broker-Server              # optional, paired with login
 MT5_PIPE_IO_TIMEOUT_SECONDS=60                # optional; 0 disables it
 MT5_HANDSHAKE_TIMEOUT_SECONDS=5               # optional, positive
 MT5_TCP_WRITE_STALL_TIMEOUT_SECONDS=15        # optional, positive
@@ -24,7 +24,10 @@ MT5_MAX_CONNECTIONS=32                         # optional, positive
 MT5_PIPE_OPEN_TIMEOUT_SECONDS=60              # optional, Windows pipe open
 ```
 
-The executable derives a pipe name from `MT5_TERMINAL_PATH` using the same
+If the account variables are omitted, the bridge adopts the account returned
+by MT5 during startup and uses that account identity for later checks. If one
+account variable is provided without the other, startup fails. The executable
+derives a pipe name from `MT5_TERMINAL_PATH` using the same
 UTF-16LE/SHA-256 rule as the Go client. An explicit pipe or terminal path is
 required until automatic process discovery has been verified in the target
 Wine environment.
