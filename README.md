@@ -84,6 +84,7 @@ The `examples/` directory contains runnable programs covering the main use cases
 | `examples/quotes` | Poll quotes for a whole symbol list with one RPC per interval |
 | `examples/trade` | Place a market order with `tradeutil.Buy` |
 | `examples/risk` | Position sizing from balance, symbol info, and current tick |
+| `examples/node` | Dependency-free Node.js CLI for the Rust `mt5-bridge` market-data operations |
 
 Run any example with `go run ./examples/<name>` on a Windows host with MT5 running.
 

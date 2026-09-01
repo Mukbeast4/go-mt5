@@ -1,0 +1,16 @@
+{
+  "name": "mt5-bridge-node-example",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Dependency-free Node.js CLI example for mt5-bridge",
+  "type": "module",
+  "bin": {
+    "mt5-bridge-example": "./cli.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node ./cli.mjs"
+  }
+}
