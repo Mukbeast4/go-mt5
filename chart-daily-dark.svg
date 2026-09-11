@@ -10,117 +10,119 @@
 <text x="802.0" y="189.2" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">10</text>
 <line x1="24.0" y1="88.8" x2="792.0" y2="88.8" stroke="#2c2c2a" stroke-width="1"/>
 <text x="802.0" y="88.8" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">15</text>
-<line x1="31.2" y1="369.9" x2="31.2" y2="369.9" stroke="#199e70" stroke-width="1"/>
-<rect x="25.8" y="369.9" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<text x="31.2" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Mar 26</text>
-<line x1="45.7" y1="329.8" x2="45.7" y2="369.9" stroke="#199e70" stroke-width="1"/>
-<rect x="40.2" y="330.5" width="11.0" height="38.7" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="60.2" y1="309.7" x2="60.2" y2="329.8" stroke="#199e70" stroke-width="1"/>
-<rect x="54.7" y="310.4" width="11.0" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="74.7" y1="289.6" x2="74.7" y2="309.7" stroke="#199e70" stroke-width="1"/>
-<rect x="69.2" y="290.4" width="11.0" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="89.2" y1="269.5" x2="89.2" y2="289.6" stroke="#199e70" stroke-width="1"/>
-<rect x="83.7" y="270.3" width="11.0" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="103.7" y1="249.4" x2="103.7" y2="269.5" stroke="#199e70" stroke-width="1"/>
-<rect x="98.2" y="250.2" width="11.0" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="118.2" y1="229.4" x2="118.2" y2="249.4" stroke="#199e70" stroke-width="1"/>
-<rect x="112.7" y="230.1" width="11.0" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="132.7" y1="209.3" x2="132.7" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="127.2" y="210.0" width="11.0" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="147.2" y1="209.3" x2="147.2" y2="209.3" stroke="#199e70" stroke-width="1"/>
-<rect x="141.7" y="209.3" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="161.7" y1="209.3" x2="161.7" y2="229.4" stroke="#d03b3b" stroke-width="1"/>
-<rect x="155.4" y="209.3" width="12.5" height="20.1" rx="1" fill="#d03b3b"/>
-<text x="161.7" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Jul 29</text>
-<line x1="176.2" y1="229.4" x2="176.2" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="170.7" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="190.6" y1="229.4" x2="190.6" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="185.1" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="205.1" y1="229.4" x2="205.1" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="199.6" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="219.6" y1="229.4" x2="219.6" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="214.1" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="234.1" y1="229.4" x2="234.1" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="228.6" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="248.6" y1="229.4" x2="248.6" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="243.1" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="263.1" y1="229.4" x2="263.1" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="257.6" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="277.6" y1="229.4" x2="277.6" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="272.1" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="292.1" y1="229.4" x2="292.1" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="286.6" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<text x="292.1" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Aug 7</text>
-<line x1="306.6" y1="229.4" x2="306.6" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="301.1" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="321.1" y1="229.4" x2="321.1" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="315.6" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="335.5" y1="229.4" x2="335.5" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="330.1" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="350.0" y1="229.4" x2="350.0" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="344.5" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="364.5" y1="229.4" x2="364.5" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="359.0" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="379.0" y1="229.4" x2="379.0" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="373.5" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="393.5" y1="229.4" x2="393.5" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="388.0" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="408.0" y1="229.4" x2="408.0" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="402.5" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="422.5" y1="229.4" x2="422.5" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="417.0" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<text x="422.5" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Aug 16</text>
-<line x1="437.0" y1="229.4" x2="437.0" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="431.5" y="229.4" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="451.5" y1="209.3" x2="451.5" y2="229.4" stroke="#199e70" stroke-width="1"/>
-<rect x="446.0" y="210.0" width="11.0" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="466.0" y1="209.3" x2="466.0" y2="209.3" stroke="#199e70" stroke-width="1"/>
-<rect x="460.5" y="209.3" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="480.5" y1="209.3" x2="480.5" y2="209.3" stroke="#199e70" stroke-width="1"/>
-<rect x="475.0" y="209.3" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="494.9" y1="209.3" x2="494.9" y2="209.3" stroke="#199e70" stroke-width="1"/>
-<rect x="489.4" y="209.3" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="509.4" y1="209.3" x2="509.4" y2="209.3" stroke="#199e70" stroke-width="1"/>
-<rect x="503.9" y="209.3" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="523.9" y1="189.2" x2="523.9" y2="209.3" stroke="#199e70" stroke-width="1"/>
-<rect x="518.4" y="190.0" width="11.0" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="538.4" y1="149.0" x2="538.4" y2="189.2" stroke="#199e70" stroke-width="1"/>
-<rect x="532.9" y="149.8" width="11.0" height="38.7" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="552.9" y1="149.0" x2="552.9" y2="149.0" stroke="#199e70" stroke-width="1"/>
-<rect x="547.4" y="149.0" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<text x="552.9" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Aug 25</text>
-<line x1="567.4" y1="149.0" x2="567.4" y2="149.0" stroke="#199e70" stroke-width="1"/>
-<rect x="561.9" y="149.0" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="581.9" y1="129.0" x2="581.9" y2="149.0" stroke="#199e70" stroke-width="1"/>
-<rect x="576.4" y="129.7" width="11.0" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="596.4" y1="129.0" x2="596.4" y2="129.0" stroke="#199e70" stroke-width="1"/>
-<rect x="590.9" y="129.0" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="610.9" y1="129.0" x2="610.9" y2="129.0" stroke="#199e70" stroke-width="1"/>
-<rect x="605.4" y="129.0" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="625.4" y1="129.0" x2="625.4" y2="129.0" stroke="#199e70" stroke-width="1"/>
-<rect x="619.9" y="129.0" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="639.8" y1="129.0" x2="639.8" y2="129.0" stroke="#199e70" stroke-width="1"/>
-<rect x="634.4" y="129.0" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="654.3" y1="129.0" x2="654.3" y2="129.0" stroke="#199e70" stroke-width="1"/>
-<rect x="648.8" y="129.0" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="668.8" y1="129.0" x2="668.8" y2="129.0" stroke="#199e70" stroke-width="1"/>
-<rect x="663.3" y="129.0" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="683.3" y1="129.0" x2="683.3" y2="129.0" stroke="#199e70" stroke-width="1"/>
-<rect x="677.8" y="129.0" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<text x="683.3" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Sep 3</text>
-<line x1="697.8" y1="129.0" x2="697.8" y2="129.0" stroke="#199e70" stroke-width="1"/>
-<rect x="692.3" y="129.0" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="712.3" y1="129.0" x2="712.3" y2="129.0" stroke="#199e70" stroke-width="1"/>
-<rect x="706.8" y="129.0" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="726.8" y1="129.0" x2="726.8" y2="129.0" stroke="#199e70" stroke-width="1"/>
-<rect x="721.3" y="129.0" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="741.3" y1="108.9" x2="741.3" y2="129.0" stroke="#199e70" stroke-width="1"/>
-<rect x="735.8" y="109.6" width="11.0" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="755.8" y1="108.9" x2="755.8" y2="108.9" stroke="#199e70" stroke-width="1"/>
-<rect x="750.3" y="108.9" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="770.3" y1="108.9" x2="770.3" y2="108.9" stroke="#199e70" stroke-width="1"/>
-<rect x="764.8" y="108.9" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
-<line x1="784.8" y1="108.9" x2="784.8" y2="108.9" stroke="#199e70" stroke-width="1"/>
-<rect x="779.3" y="108.9" width="11.0" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="31.1" y1="369.9" x2="31.1" y2="369.9" stroke="#199e70" stroke-width="1"/>
+<rect x="25.8" y="369.9" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<text x="31.1" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Mar 26</text>
+<line x1="45.3" y1="329.8" x2="45.3" y2="369.9" stroke="#199e70" stroke-width="1"/>
+<rect x="40.0" y="330.5" width="10.7" height="38.7" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="59.6" y1="309.7" x2="59.6" y2="329.8" stroke="#199e70" stroke-width="1"/>
+<rect x="54.2" y="310.4" width="10.7" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="73.8" y1="289.6" x2="73.8" y2="309.7" stroke="#199e70" stroke-width="1"/>
+<rect x="68.4" y="290.4" width="10.7" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="88.0" y1="269.5" x2="88.0" y2="289.6" stroke="#199e70" stroke-width="1"/>
+<rect x="82.6" y="270.3" width="10.7" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="102.2" y1="249.4" x2="102.2" y2="269.5" stroke="#199e70" stroke-width="1"/>
+<rect x="96.9" y="250.2" width="10.7" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="116.4" y1="229.4" x2="116.4" y2="249.4" stroke="#199e70" stroke-width="1"/>
+<rect x="111.1" y="230.1" width="10.7" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="130.7" y1="209.3" x2="130.7" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="125.3" y="210.0" width="10.7" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="144.9" y1="209.3" x2="144.9" y2="209.3" stroke="#199e70" stroke-width="1"/>
+<rect x="139.5" y="209.3" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="159.1" y1="209.3" x2="159.1" y2="229.4" stroke="#d03b3b" stroke-width="1"/>
+<rect x="153.0" y="209.3" width="12.2" height="20.1" rx="1" fill="#d03b3b"/>
+<text x="159.1" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Jul 29</text>
+<line x1="173.3" y1="229.4" x2="173.3" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="168.0" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="187.6" y1="229.4" x2="187.6" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="182.2" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="201.8" y1="229.4" x2="201.8" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="196.4" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="216.0" y1="229.4" x2="216.0" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="210.6" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="230.2" y1="229.4" x2="230.2" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="224.9" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="244.4" y1="229.4" x2="244.4" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="239.1" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="258.7" y1="229.4" x2="258.7" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="253.3" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="272.9" y1="229.4" x2="272.9" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="267.5" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="287.1" y1="229.4" x2="287.1" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="281.8" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<text x="287.1" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Aug 7</text>
+<line x1="301.3" y1="229.4" x2="301.3" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="296.0" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="315.6" y1="229.4" x2="315.6" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="310.2" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="329.8" y1="229.4" x2="329.8" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="324.4" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="344.0" y1="229.4" x2="344.0" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="338.6" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="358.2" y1="229.4" x2="358.2" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="352.9" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="372.4" y1="229.4" x2="372.4" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="367.1" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="386.7" y1="229.4" x2="386.7" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="381.3" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="400.9" y1="229.4" x2="400.9" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="395.5" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="415.1" y1="229.4" x2="415.1" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="409.8" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<text x="415.1" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Aug 16</text>
+<line x1="429.3" y1="229.4" x2="429.3" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="424.0" y="229.4" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="443.6" y1="209.3" x2="443.6" y2="229.4" stroke="#199e70" stroke-width="1"/>
+<rect x="438.2" y="210.0" width="10.7" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="457.8" y1="209.3" x2="457.8" y2="209.3" stroke="#199e70" stroke-width="1"/>
+<rect x="452.4" y="209.3" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="472.0" y1="209.3" x2="472.0" y2="209.3" stroke="#199e70" stroke-width="1"/>
+<rect x="466.6" y="209.3" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="486.2" y1="209.3" x2="486.2" y2="209.3" stroke="#199e70" stroke-width="1"/>
+<rect x="480.9" y="209.3" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="500.4" y1="209.3" x2="500.4" y2="209.3" stroke="#199e70" stroke-width="1"/>
+<rect x="495.1" y="209.3" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="514.7" y1="189.2" x2="514.7" y2="209.3" stroke="#199e70" stroke-width="1"/>
+<rect x="509.3" y="190.0" width="10.7" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="528.9" y1="149.0" x2="528.9" y2="189.2" stroke="#199e70" stroke-width="1"/>
+<rect x="523.5" y="149.8" width="10.7" height="38.7" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="543.1" y1="149.0" x2="543.1" y2="149.0" stroke="#199e70" stroke-width="1"/>
+<rect x="537.8" y="149.0" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<text x="543.1" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Aug 25</text>
+<line x1="557.3" y1="149.0" x2="557.3" y2="149.0" stroke="#199e70" stroke-width="1"/>
+<rect x="552.0" y="149.0" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="571.6" y1="129.0" x2="571.6" y2="149.0" stroke="#199e70" stroke-width="1"/>
+<rect x="566.2" y="129.7" width="10.7" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="585.8" y1="129.0" x2="585.8" y2="129.0" stroke="#199e70" stroke-width="1"/>
+<rect x="580.4" y="129.0" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="600.0" y1="129.0" x2="600.0" y2="129.0" stroke="#199e70" stroke-width="1"/>
+<rect x="594.6" y="129.0" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="614.2" y1="129.0" x2="614.2" y2="129.0" stroke="#199e70" stroke-width="1"/>
+<rect x="608.9" y="129.0" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="628.4" y1="129.0" x2="628.4" y2="129.0" stroke="#199e70" stroke-width="1"/>
+<rect x="623.1" y="129.0" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="642.7" y1="129.0" x2="642.7" y2="129.0" stroke="#199e70" stroke-width="1"/>
+<rect x="637.3" y="129.0" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="656.9" y1="129.0" x2="656.9" y2="129.0" stroke="#199e70" stroke-width="1"/>
+<rect x="651.5" y="129.0" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="671.1" y1="129.0" x2="671.1" y2="129.0" stroke="#199e70" stroke-width="1"/>
+<rect x="665.8" y="129.0" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<text x="671.1" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Sep 3</text>
+<line x1="685.3" y1="129.0" x2="685.3" y2="129.0" stroke="#199e70" stroke-width="1"/>
+<rect x="680.0" y="129.0" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="699.6" y1="129.0" x2="699.6" y2="129.0" stroke="#199e70" stroke-width="1"/>
+<rect x="694.2" y="129.0" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="713.8" y1="129.0" x2="713.8" y2="129.0" stroke="#199e70" stroke-width="1"/>
+<rect x="708.4" y="129.0" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="728.0" y1="108.9" x2="728.0" y2="129.0" stroke="#199e70" stroke-width="1"/>
+<rect x="722.6" y="109.6" width="10.7" height="18.6" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="742.2" y1="108.9" x2="742.2" y2="108.9" stroke="#199e70" stroke-width="1"/>
+<rect x="736.9" y="108.9" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="756.4" y1="108.9" x2="756.4" y2="108.9" stroke="#199e70" stroke-width="1"/>
+<rect x="751.1" y="108.9" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="770.7" y1="108.9" x2="770.7" y2="108.9" stroke="#199e70" stroke-width="1"/>
+<rect x="765.3" y="108.9" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
+<line x1="784.9" y1="108.9" x2="784.9" y2="108.9" stroke="#199e70" stroke-width="1"/>
+<rect x="779.5" y="108.9" width="10.7" height="0.5" rx="1" fill="#1a1a19" stroke="#199e70" stroke-width="1.5"/>
 <rect x="0.5" y="0.5" width="879" height="439" rx="8" fill="none" stroke="rgba(255,255,255,0.10)"/>
 </svg>
