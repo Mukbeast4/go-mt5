@@ -1,34 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="440" viewBox="0 0 880 440" role="img" aria-label="Monthly candlestick chart of GitHub stars for Mukbeast4/go-mt5">
 <rect width="880" height="440" rx="8" fill="#fcfcfb"/>
 <text x="24" y="42" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" fill="#52514e">Mukbeast4/go-mt5 · Monthly</text>
-<text x="24" y="74" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"><tspan font-size="28" font-weight="600" fill="#0b0b0b">16</tspan><tspan dx="8" font-size="13" fill="#52514e">stars</tspan></text>
+<text x="24" y="74" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"><tspan font-size="28" font-weight="600" fill="#0b0b0b">17</tspan><tspan dx="8" font-size="13" fill="#52514e">stars</tspan><tspan dx="12" font-size="13" fill="#006300">+1 (+6.2%) this month</tspan></text>
 <line x1="24.0" y1="390.0" x2="792.0" y2="390.0" stroke="#e1e0d9" stroke-width="1"/>
 <text x="802.0" y="390.0" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">0</text>
-<line x1="24.0" y1="302.2" x2="792.0" y2="302.2" stroke="#e1e0d9" stroke-width="1"/>
-<text x="802.0" y="302.2" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">5</text>
-<line x1="24.0" y1="214.4" x2="792.0" y2="214.4" stroke="#e1e0d9" stroke-width="1"/>
-<text x="802.0" y="214.4" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">10</text>
-<line x1="24.0" y1="126.6" x2="792.0" y2="126.6" stroke="#e1e0d9" stroke-width="1"/>
-<text x="802.0" y="126.6" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">15</text>
-<line x1="72.0" y1="372.4" x2="72.0" y2="372.4" stroke="#199e70" stroke-width="1"/>
-<rect x="60.8" y="372.4" width="22.5" height="0.5" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<line x1="24.0" y1="307.4" x2="792.0" y2="307.4" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="307.4" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">5</text>
+<line x1="24.0" y1="224.8" x2="792.0" y2="224.8" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="224.8" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">10</text>
+<line x1="24.0" y1="142.2" x2="792.0" y2="142.2" stroke="#e1e0d9" stroke-width="1"/>
+<text x="802.0" y="142.2" dy="0.35em" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781" style="font-variant-numeric: tabular-nums">15</text>
+<line x1="72.0" y1="373.5" x2="72.0" y2="373.5" stroke="#199e70" stroke-width="1"/>
+<rect x="60.8" y="373.5" width="22.5" height="0.5" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
 <text x="72.0" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Mar 2026</text>
-<line x1="168.0" y1="337.3" x2="168.0" y2="372.4" stroke="#199e70" stroke-width="1"/>
-<rect x="156.8" y="338.1" width="22.5" height="33.6" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
-<line x1="264.0" y1="284.7" x2="264.0" y2="337.3" stroke="#199e70" stroke-width="1"/>
-<rect x="252.8" y="285.4" width="22.5" height="51.2" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<line x1="168.0" y1="340.4" x2="168.0" y2="373.5" stroke="#199e70" stroke-width="1"/>
+<rect x="156.8" y="341.2" width="22.5" height="31.5" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<line x1="264.0" y1="290.9" x2="264.0" y2="340.4" stroke="#199e70" stroke-width="1"/>
+<rect x="252.8" y="291.6" width="22.5" height="48.1" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
 <text x="264.0" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">May 2026</text>
-<line x1="360.0" y1="232.0" x2="360.0" y2="284.7" stroke="#199e70" stroke-width="1"/>
-<rect x="348.8" y="232.7" width="22.5" height="51.2" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
-<line x1="456.0" y1="232.0" x2="456.0" y2="249.5" stroke="#d03b3b" stroke-width="1"/>
-<rect x="444.0" y="232.0" width="24.0" height="17.6" rx="1" fill="#d03b3b"/>
+<line x1="360.0" y1="241.3" x2="360.0" y2="290.9" stroke="#199e70" stroke-width="1"/>
+<rect x="348.8" y="242.1" width="22.5" height="48.1" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<line x1="456.0" y1="241.3" x2="456.0" y2="257.8" stroke="#d03b3b" stroke-width="1"/>
+<rect x="444.0" y="241.3" width="24.0" height="16.5" rx="1" fill="#d03b3b"/>
 <text x="456.0" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Jul 2026</text>
-<line x1="552.0" y1="161.7" x2="552.0" y2="249.5" stroke="#199e70" stroke-width="1"/>
-<rect x="540.8" y="162.5" width="22.5" height="86.3" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
-<line x1="648.0" y1="109.1" x2="648.0" y2="161.7" stroke="#199e70" stroke-width="1"/>
-<rect x="636.8" y="109.8" width="22.5" height="51.2" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<line x1="552.0" y1="175.2" x2="552.0" y2="257.8" stroke="#199e70" stroke-width="1"/>
+<rect x="540.8" y="176.0" width="22.5" height="81.1" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<line x1="648.0" y1="125.7" x2="648.0" y2="175.2" stroke="#199e70" stroke-width="1"/>
+<rect x="636.8" y="126.4" width="22.5" height="48.1" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
 <text x="648.0" y="408.0" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#898781">Sep 2026</text>
-<line x1="744.0" y1="109.1" x2="744.0" y2="109.1" stroke="#199e70" stroke-width="1"/>
-<rect x="732.8" y="109.1" width="22.5" height="0.5" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
+<line x1="744.0" y1="109.1" x2="744.0" y2="125.7" stroke="#199e70" stroke-width="1"/>
+<rect x="732.8" y="109.9" width="22.5" height="15.0" rx="1" fill="#fcfcfb" stroke="#199e70" stroke-width="1.5"/>
 <rect x="0.5" y="0.5" width="879" height="439" rx="8" fill="none" stroke="rgba(11,11,11,0.10)"/>
 </svg>
