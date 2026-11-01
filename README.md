@@ -244,6 +244,10 @@ go-mt5/
 
 ## Changelog
 
+### v0.1.15
+
+- Fix `OrdersGet`: pending order prices are read in wire order (`open, sl, tp, current, stoplimit`). `PriceSL`, `PriceTP` and `PriceCurrent` were shifted.
+
 ### v0.1.14
 
 Performance release: protocol decode allocations cut by two thirds. No API or wire-format changes.
