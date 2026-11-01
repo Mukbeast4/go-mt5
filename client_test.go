@@ -508,14 +508,48 @@ func mockOrder(ticket int64, symbol string) []byte {
 	d = writeF64(d, 0.1)
 	d = writeF64(d, 0.1)
 	d = writeF64(d, 1.0850)
+	d = writeF64(d, 1.0800)
+	d = writeF64(d, 1.0900)
 	d = writeF64(d, 1.0860)
-	d = writeF64(d, 0)
-	d = writeF64(d, 0)
-	d = writeF64(d, 0)
+	d = writeF64(d, 1.0870)
 	d = writeFixedStr(d, symbol, 64)
 	d = writeFixedStr(d, "", 64)
 	d = writeFixedStr(d, "", 64)
 	return d
+}
+
+func TestOrdersGetDecodesPricesInWireOrder(t *testing.T) {
+	mock := newMockPipe(t, func(cmdID uint32, params []byte) (bool, []byte) {
+		switch cmdID {
+		case protocol.CmdInitialize:
+			return true, writeU32(nil, 5833)
+		case protocol.CmdOrdersGet:
+			return true, append(writeU32(nil, 1), mockOrder(1001, "EURUSD")...)
+		}
+		return false, nil
+	})
+	defer mock.Close()
+
+	ctx := context.Background()
+	client, err := gomt5.NewClientFromConn(ctx, mock)
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+	defer client.Close()
+
+	orders, err := client.OrdersGet(ctx, nil)
+	if err != nil {
+		t.Fatalf("orders get: %v", err)
+	}
+	if len(orders) != 1 {
+		t.Fatalf("expected 1 order, got %d", len(orders))
+	}
+	o := orders[0]
+	got := [5]float64{o.PriceOpen, o.PriceSL, o.PriceTP, o.PriceCurrent, o.PriceStopLimit}
+	want := [5]float64{1.0850, 1.0800, 1.0900, 1.0860, 1.0870}
+	if got != want {
+		t.Errorf("open, sl, tp, current, stop limit: got %v, want %v", got, want)
+	}
 }
 
 func TestOrdersGetWithFilter(t *testing.T) {
